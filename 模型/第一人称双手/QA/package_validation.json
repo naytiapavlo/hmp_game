@@ -1,0 +1,28 @@
+{
+  "passed": true,
+  "package": "FPHands_URP.unitypackage",
+  "exact_matching_binary_files": [
+    "SK_FPHands_01.fbx",
+    "Textures/T_FPHands_01_AO.png",
+    "Textures/T_FPHands_01_BaseColor.png",
+    "Textures/T_FPHands_01_MetallicSmoothness.png",
+    "Textures/T_FPHands_01_Normal.png",
+    "Textures/T_FPHands_01_Roughness.png",
+    "Licenses/HafniaHands_MIT.txt",
+    "Licenses/Oculus_SampleFramework_BSD3.txt"
+  ],
+  "asset_paths": [
+    "Assets/FPHands/FPHands_01.prefab",
+    "Assets/FPHands/Licenses/HafniaHands_MIT.txt",
+    "Assets/FPHands/Licenses/Oculus_SampleFramework_BSD3.txt",
+    "Assets/FPHands/M_FPHands_01.mat",
+    "Assets/FPHands/SK_FPHands_01.fbx",
+    "Assets/FPHands/SourceNotice.txt",
+    "Assets/FPHands/Textures/T_FPHands_01_AO.png",
+    "Assets/FPHands/Textures/T_FPHands_01_BaseColor.png",
+    "Assets/FPHands/Textures/T_FPHands_01_MetallicSmoothness.png",
+    "Assets/FPHands/Textures/T_FPHands_01_Normal.png",
+    "Assets/FPHands/Textures/T_FPHands_01_Roughness.png"
+  ],
+  "includes_game_scenes_or_project_settings": false
+}

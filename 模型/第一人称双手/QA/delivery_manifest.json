@@ -1,0 +1,199 @@
+{
+  "asset": "SK_FPHands_01",
+  "created_utc": "2026-09-19T05:01:22.328110+00:00",
+  "scope": "left and right hands with continuous forearms",
+  "validation": {
+    "blender": true,
+    "unity": true,
+    "package_bytes": true
+  },
+  "file_count": 37,
+  "total_bytes": 28100333,
+  "files": [
+    {
+      "path": ".gitattributes",
+      "size_bytes": 203,
+      "sha256": "a67c638ed3e37d39ae208b9224efba4cb44609d72aea27131cddb32051302dca"
+    },
+    {
+      "path": ".gitignore",
+      "size_bytes": 114,
+      "sha256": "632c8e99c516bd616110cd24c6aa7513d341ec4d1e4f87c6cc12e9f5798f8af4"
+    },
+    {
+      "path": "FPHands_URP.unitypackage",
+      "size_bytes": 6797463,
+      "sha256": "68316aa2591019b4ed3fced026701f07d957159d75ab510f592fd2e02a5e5b1a"
+    },
+    {
+      "path": "Licenses/HafniaHands_MIT.txt",
+      "size_bytes": 1071,
+      "sha256": "d7ba0627bf8242a386f9e1edcb2ff267cff95c62ebbb698ca96620890594adc2"
+    },
+    {
+      "path": "Licenses/Oculus_SampleFramework_BSD3.txt",
+      "size_bytes": 1641,
+      "sha256": "6c2a263fa5adbd9cd92de7022bf2b4d94fe5aad55050468307137d2e0a99762f"
+    },
+    {
+      "path": "Previews/FPHands_Detail.png",
+      "size_bytes": 1460130,
+      "sha256": "3cdb58e7157742e95a6fac7ad0a1935f610933d5db80458eba946584c4d9d308"
+    },
+    {
+      "path": "Previews/FPHands_FirstPerson.png",
+      "size_bytes": 1421888,
+      "sha256": "7e919df4d33d6c900a7eb15d1a76bd927eb51001d397d5af2b8d979001a4181d"
+    },
+    {
+      "path": "Previews/FPHands_GripCheck.png",
+      "size_bytes": 1415449,
+      "sha256": "8bf9f264c31f475df45a12e48f0b161e4e91a4245b761b9d8401322eacb55adc"
+    },
+    {
+      "path": "Previews/FPHands_UnityURP.png",
+      "size_bytes": 114791,
+      "sha256": "279f0058c2da1bd458fd70af7b558cd3f4912adb476b43f4339c9e9b763b4b00"
+    },
+    {
+      "path": "QA/blender_validation.json",
+      "size_bytes": 4431,
+      "sha256": "e4627694fab2a4b9ab3f9cb38e5432c471e3d5a38e087ffd57e92527fb30042c"
+    },
+    {
+      "path": "QA/package_validation.json",
+      "size_bytes": 1089,
+      "sha256": "a733183d7fbaae485cded3cad64b2049c51f5400f24c84052c295be9878d23aa"
+    },
+    {
+      "path": "QA/unity_validation.json",
+      "size_bytes": 326,
+      "sha256": "bd60c88b0895f59f2d1aa42b309564aa65bea7404927753b2e97273ca68d14c7"
+    },
+    {
+      "path": "README.md",
+      "size_bytes": 4296,
+      "sha256": "52739218d726ed706923debcc6ba91486e0c7e345c943772a159843ab2794bb1"
+    },
+    {
+      "path": "Scripts/bake_pbr.py",
+      "size_bytes": 5194,
+      "sha256": "e05d2802f27c30b1bfa671fc030db6da70895c64e8b5bb4b881675069abd483c"
+    },
+    {
+      "path": "Scripts/build_fp_hands.py",
+      "size_bytes": 13666,
+      "sha256": "c5d6004b582ecb20879bebdb3f142508c12045881f10204bf5e2aa618e2f0148"
+    },
+    {
+      "path": "Scripts/export_unity_fbx.py",
+      "size_bytes": 1662,
+      "sha256": "1c579b83870cb487f3e96421733b10d878b797016787bee22f7b41e1f045b8a4"
+    },
+    {
+      "path": "Scripts/forearm_geometry.py",
+      "size_bytes": 8754,
+      "sha256": "4619bb15c004906adcc103bf332fe8256504a7d28ad7f771552897c83943c529"
+    },
+    {
+      "path": "Scripts/HandsQA.cs",
+      "size_bytes": 10232,
+      "sha256": "ccd8d822a1b84461833d4e5aa8e15e83c3f473b501dc74dc254e39d33d60b07f"
+    },
+    {
+      "path": "Scripts/validate_export.py",
+      "size_bytes": 6654,
+      "sha256": "fcb54eb25ad9f79323e58b57421c94dbfaff32eacc12bdf9de9523e074431146"
+    },
+    {
+      "path": "SK_FPHands_01.blend",
+      "size_bytes": 6823764,
+      "sha256": "7337cf8b575d1691ba0386444ffe4d129e20e6203da891f42ccffd1fcaa9e969"
+    },
+    {
+      "path": "SK_FPHands_01.fbx",
+      "size_bytes": 719852,
+      "sha256": "775dbab1fb1e2c6cd64b6069648e618e83cd1344021bf19332586fb36e3c5fa1"
+    },
+    {
+      "path": "Sources/Hand_AO.jpg",
+      "size_bytes": 136975,
+      "sha256": "3dc377e1cd77cff491ef01a481456b12d0b26ab6ce34c3d0402ac94da5873bc3"
+    },
+    {
+      "path": "Sources/Hand_BaseColor.jpg",
+      "size_bytes": 221047,
+      "sha256": "699a7f298e0adf2148b4c6bd9dd59f9049f2021f7a6cb13cbbd0f7a51446d17d"
+    },
+    {
+      "path": "Sources/Hand_Normal.jpg",
+      "size_bytes": 692658,
+      "sha256": "f3bfa5d21d38cf55284e2acae282784052e9a9a7584310b9f19282ee79516492"
+    },
+    {
+      "path": "Sources/Hand_Roughness.jpg",
+      "size_bytes": 61972,
+      "sha256": "948c785b28b6791b77189edbd5a2d230ebc642ffcb1cb42b6ca6410e12836277"
+    },
+    {
+      "path": "Sources/import_report.json",
+      "size_bytes": 23847,
+      "sha256": "7fa7fc07ae02614425560fd3f4cfdab51fddabec88e3e730ae46165e2f823ad9"
+    },
+    {
+      "path": "Sources/l_hand_skeletal_lowres.fbx",
+      "size_bytes": 258784,
+      "sha256": "f261800a9b284c0ca3aa2a16024f0fbf63a5b9f3174c80f65933b062ecec5d23"
+    },
+    {
+      "path": "Sources/r_hand_skeletal_lowres.fbx",
+      "size_bytes": 262336,
+      "sha256": "3e2fde2093509941052a708823045b5635eeb417b068e097a05dad2769f2775a"
+    },
+    {
+      "path": "Sources/README.md",
+      "size_bytes": 994,
+      "sha256": "f4998f95e358da994093215373f9b029b808a667bd5387da2ebccbf9a1f07354"
+    },
+    {
+      "path": "Sources/source_manifest.json",
+      "size_bytes": 19479,
+      "sha256": "9fa5e40dc3b41645ca8e645539139310ec1e708c93ca95fba141a068d2113194"
+    },
+    {
+      "path": "Sources/upstream_tree.json",
+      "size_bytes": 1322988,
+      "sha256": "b34148fea31ddf7316e2d1f3b489b7db71ec8bcd46eb75fa02f49d024ac893e7"
+    },
+    {
+      "path": "Textures/T_FPHands_01_AO.png",
+      "size_bytes": 1266870,
+      "sha256": "6dee1f66a7feea4236bbb35ff524dfbc5cf483ab9e9927e14354505f7a6e6d80"
+    },
+    {
+      "path": "Textures/T_FPHands_01_BaseColor.png",
+      "size_bytes": 1653092,
+      "sha256": "1b794d86374a33145af87a23a095bda739200fe87c8d63e1a65d5b941cf7e389"
+    },
+    {
+      "path": "Textures/T_FPHands_01_MetallicSmoothness.png",
+      "size_bytes": 145068,
+      "sha256": "95c02260fb67587e8ba030ee7c7ad857002df91f753d67a6335f535630f3f49e"
+    },
+    {
+      "path": "Textures/T_FPHands_01_Normal.png",
+      "size_bytes": 3086554,
+      "sha256": "1e114cbcde1987448d4423f2683bbfbcbd2bbc1832cd15131ddfc7af08ffe6bd"
+    },
+    {
+      "path": "Textures/T_FPHands_01_Roughness.png",
+      "size_bytes": 131257,
+      "sha256": "db94b8c9e836fd4f2521ed59b34017308ec6addca8259aa1e59d5359cd3ea943"
+    },
+    {
+      "path": "资产来源登记.md",
+      "size_bytes": 3742,
+      "sha256": "044cf13672f44311f5ccfd5ee6c4292804c2eb0adacda54e156a552f7b92c075"
+    }
+  ]
+}

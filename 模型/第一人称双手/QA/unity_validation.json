@@ -1,0 +1,13 @@
+{
+    "passed": true,
+    "unityVersion": "6000.6.0f1",
+    "shader": "Universal Render Pipeline/Lit",
+    "meshes": 2,
+    "triangles": 18616,
+    "bones": 37,
+    "leftX": -0.20057131350040436,
+    "rightX": 0.19956478476524353,
+    "forwardZ": 0.44731587171554565,
+    "thumbMotion": 0.018547678366303444,
+    "error": ""
+}

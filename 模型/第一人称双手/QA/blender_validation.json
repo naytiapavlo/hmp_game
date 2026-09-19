@@ -1,0 +1,194 @@
+{
+  "blender_version": "5.2.0 LTS",
+  "units": "meters",
+  "bones": 37,
+  "deform_bones": 36,
+  "meshes": [
+    {
+      "name": "SK_FPArm_L_01",
+      "vertices": 4658,
+      "triangles": 9312,
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "loose_vertices": 0,
+      "volume_m3": 0.0013305747595026346,
+      "dimensions_m": [
+        0.1790986955165863,
+        0.37940526008605957,
+        0.2586045265197754
+      ],
+      "uv_layers": [
+        "UVMap"
+      ],
+      "max_influences": 4,
+      "max_weight_sum_error": 1.6088597476482391e-07,
+      "missing_weight_bones": [],
+      "uv_range": [
+        0.006000000052154064,
+        0.9769653081893921
+      ],
+      "transform_identity_error": 0.0
+    },
+    {
+      "name": "SK_FPArm_R_01",
+      "vertices": 4654,
+      "triangles": 9304,
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "loose_vertices": 0,
+      "volume_m3": 0.0013356075943170473,
+      "dimensions_m": [
+        0.17665283381938934,
+        0.3824085593223572,
+        0.25650596618652344
+      ],
+      "uv_layers": [
+        "UVMap"
+      ],
+      "max_influences": 4,
+      "max_weight_sum_error": 1.5023397281765938e-07,
+      "missing_weight_bones": [],
+      "uv_range": [
+        0.01843373291194439,
+        0.9940000772476196
+      ],
+      "transform_identity_error": 0.0
+    }
+  ],
+  "finger_deformation": [
+    {
+      "finger": "Thumb.L",
+      "max_motion_m": 0.01854776032269001,
+      "opposite_arm_motion_m": 0.0
+    },
+    {
+      "finger": "Index.L",
+      "max_motion_m": 0.018425190821290016,
+      "opposite_arm_motion_m": 0.0
+    },
+    {
+      "finger": "Middle.L",
+      "max_motion_m": 0.020753132179379463,
+      "opposite_arm_motion_m": 0.0
+    },
+    {
+      "finger": "Ring.L",
+      "max_motion_m": 0.0180512648075819,
+      "opposite_arm_motion_m": 0.0
+    },
+    {
+      "finger": "Little.L",
+      "max_motion_m": 0.014318703673779964,
+      "opposite_arm_motion_m": 0.0
+    },
+    {
+      "finger": "Thumb.R",
+      "max_motion_m": 0.01875547505915165,
+      "opposite_arm_motion_m": 0.0
+    },
+    {
+      "finger": "Index.R",
+      "max_motion_m": 0.018663791939616203,
+      "opposite_arm_motion_m": 0.0
+    },
+    {
+      "finger": "Middle.R",
+      "max_motion_m": 0.020956994965672493,
+      "opposite_arm_motion_m": 0.0
+    },
+    {
+      "finger": "Ring.R",
+      "max_motion_m": 0.018215440213680267,
+      "opposite_arm_motion_m": 0.0
+    },
+    {
+      "finger": "Little.R",
+      "max_motion_m": 0.01444253046065569,
+      "opposite_arm_motion_m": 0.0
+    }
+  ],
+  "total_triangles": 18616,
+  "forearm_bone_lengths_m": {
+    "L": 0.2572968304157257,
+    "R": 0.2573005259037018
+  },
+  "hand_wrist_to_middle_tip_m": {
+    "L": 0.18325312144854622,
+    "R": 0.18325219299820109
+  },
+  "texture_sizes": {
+    "T_FPHands_01_BaseColor": [
+      2048,
+      2048
+    ],
+    "T_FPHands_01_Roughness": [
+      2048,
+      2048
+    ],
+    "T_FPHands_01_Normal": [
+      2048,
+      2048
+    ],
+    "T_FPHands_01_AO": [
+      2048,
+      2048
+    ],
+    "T_FPHands_01_MetallicSmoothness": [
+      2048,
+      2048
+    ]
+  },
+  "passed": true,
+  "export": {
+    "axis_forward": "-Z",
+    "axis_up": "Y",
+    "selected_meshes": 2,
+    "armatures": 1,
+    "leaf_bones": false,
+    "animation": false,
+    "external_textures": true,
+    "temporary_basis_rotation_z_degrees": 180
+  },
+  "packed_textures": {
+    "T_FPHands_01_BaseColor": {
+      "size": [
+        2048,
+        2048
+      ],
+      "packed": true,
+      "path": "//Textures/T_FPHands_01_BaseColor.png"
+    },
+    "T_FPHands_01_Roughness": {
+      "size": [
+        2048,
+        2048
+      ],
+      "packed": true,
+      "path": "//Textures/T_FPHands_01_Roughness.png"
+    },
+    "T_FPHands_01_Normal": {
+      "size": [
+        2048,
+        2048
+      ],
+      "packed": true,
+      "path": "//Textures/T_FPHands_01_Normal.png"
+    },
+    "T_FPHands_01_AO": {
+      "size": [
+        2048,
+        2048
+      ],
+      "packed": true,
+      "path": "//Textures/T_FPHands_01_AO.png"
+    },
+    "T_FPHands_01_MetallicSmoothness": {
+      "size": [
+        2048,
+        2048
+      ],
+      "packed": true,
+      "path": "//Textures/T_FPHands_01_MetallicSmoothness.png"
+    }
+  }
+}

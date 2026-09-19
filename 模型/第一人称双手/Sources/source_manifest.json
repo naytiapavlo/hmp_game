@@ -1,0 +1,414 @@
+{
+  "$comment": "上游来源与固定提交证据。成品使用方法见 ../README.md；交付文件哈希见 ../QA/delivery_manifest.json。",
+  "manifest_version": "1.1",
+  "register_date": "2026-09-19",
+  "asset": {
+    "name_cn": "第一人称双手与小臂",
+    "name_en": "First-person hands with continuous forearms",
+    "scope": "模型/第一人称双手/",
+    "note": "基于公开手部资产改造，新增小臂、重建骨架并烘焙共享图集。上游原文件哈希与成品哈希分别登记。"
+  },
+  "upstream": {
+    "repository": "https://github.com/henningpohl/Hafnia-Hands",
+    "commit": "c9753a9912046d93d4733865ab7784a17c3460c4",
+    "project_authors": [
+      "Henning Pohl",
+      "Aske Mottelson"
+    ],
+    "texture_creation_credit": "Ranjeet Singh",
+    "paper": {
+      "citation": "Pohl H. and Mottelson A. (2022) Hafnia Hands: A Multi-Skin Hand Texture Resource for Virtual Reality Research. Front. Virtual Real. 3:719506.",
+      "doi": "10.3389/frvir.2022.719506",
+      "url": "https://www.frontiersin.org/journals/virtual-reality/articles/10.3389/frvir.2022.719506/full",
+      "note": "上游 README 要求：在研究中若使用其手部贴图，请按此文献引用。上游 README 原文见 Sources/README.md。"
+    },
+    "source_directories": {
+      "models": "Hand models/Controller hands/Models",
+      "textures": "Hand models/Controller hands/Textures"
+    }
+  },
+  "license_determination": {
+    "summary": "本资产并非整体 MIT。基础手网格与皮肤贴图来自不同权利人、适用不同许可，必须分别认定。",
+    "components": [
+      {
+        "component": "皮肤贴图 (Hand_*.jpg, 4 files)",
+        "license": "MIT",
+        "spdx": "MIT",
+        "copyright": "Copyright (c) 2021 Aske Mottelson",
+        "rights_holder": "Aske Mottelson (Hafnia Hands)",
+        "license_file_relative_path": "Licenses/HafniaHands_MIT.txt",
+        "upstream_license_path": "LICENSE",
+        "rationale": "贴图来自 Hafnia-Hands 的 Hand models/Controller hands/Textures，适用仓库根 MIT 许可。经 blob SHA 比对，与 Oculus SampleFramework 贴图目录无重叠。"
+      },
+      {
+        "component": "基础手网格 (l_hand_skeletal_lowres.fbx, r_hand_skeletal_lowres.fbx)",
+        "license": "BSD-3-Clause",
+        "spdx": "BSD-3-Clause",
+        "copyright": "Copyright (c) Facebook Technologies, LLC and its affiliates. All rights reserved.",
+        "rights_holder": "Facebook Technologies, LLC and its affiliates (Oculus SampleFramework)",
+        "license_file_relative_path": "Licenses/Oculus_SampleFramework_BSD3.txt",
+        "upstream_license_path": "Unity project/Assets/Oculus/SampleFramework/license.txt",
+        "rationale": "该 FBX 与 Unity project/Assets/Oculus/SampleFramework/Core/CustomHands/Models/ 下同名文件的 Git blob SHA 完全一致，属 Oculus SampleFramework 分发内容，其授权文件为 SampleFramework/license.txt。不可简单登记为 MIT。"
+      }
+    ]
+  },
+  "source_files": {
+    "download_date": "2026-09-19",
+    "local_root": "模型/第一人称双手/Sources/",
+    "url_encoding_note": "raw 下载 URL 指向固定提交；路径中的空格按 %20 编码。",
+    "models": [
+      {
+        "name": "l_hand_skeletal_lowres.fbx",
+        "local_path": "模型/第一人称双手/Sources/l_hand_skeletal_lowres.fbx",
+        "upstream_path": "Hand models/Controller hands/Models/l_hand_skeletal_lowres.fbx",
+        "size_bytes": 258784,
+        "sha256": "f261800a9b284c0ca3aa2a16024f0fbf63a5b9f3174c80f65933b062ecec5d23",
+        "raw_url": "https://raw.githubusercontent.com/henningpohl/Hafnia-Hands/c9753a9912046d93d4733865ab7784a17c3460c4/Hand%20models/Controller%20hands/Models/l_hand_skeletal_lowres.fbx",
+        "license": "BSD-3-Clause",
+        "license_file_relative_path": "Licenses/Oculus_SampleFramework_BSD3.txt"
+      },
+      {
+        "name": "r_hand_skeletal_lowres.fbx",
+        "local_path": "模型/第一人称双手/Sources/r_hand_skeletal_lowres.fbx",
+        "upstream_path": "Hand models/Controller hands/Models/r_hand_skeletal_lowres.fbx",
+        "size_bytes": 262336,
+        "sha256": "3e2fde2093509941052a708823045b5635eeb417b068e097a05dad2769f2775a",
+        "raw_url": "https://raw.githubusercontent.com/henningpohl/Hafnia-Hands/c9753a9912046d93d4733865ab7784a17c3460c4/Hand%20models/Controller%20hands/Models/r_hand_skeletal_lowres.fbx",
+        "license": "BSD-3-Clause",
+        "license_file_relative_path": "Licenses/Oculus_SampleFramework_BSD3.txt"
+      }
+    ],
+    "textures": [
+      {
+        "name": "Hand_BaseColor.jpg",
+        "local_path": "模型/第一人称双手/Sources/Hand_BaseColor.jpg",
+        "upstream_path": "Hand models/Controller hands/Textures/Hand_BaseColor.jpg",
+        "size_bytes": 221047,
+        "sha256": "699a7f298e0adf2148b4c6bd9dd59f9049f2021f7a6cb13cbbd0f7a51446d17d",
+        "raw_url": "https://raw.githubusercontent.com/henningpohl/Hafnia-Hands/c9753a9912046d93d4733865ab7784a17c3460c4/Hand%20models/Controller%20hands/Textures/Hand_BaseColor.jpg",
+        "license": "MIT",
+        "license_file_relative_path": "Licenses/HafniaHands_MIT.txt"
+      },
+      {
+        "name": "Hand_Normal.jpg",
+        "local_path": "模型/第一人称双手/Sources/Hand_Normal.jpg",
+        "upstream_path": "Hand models/Controller hands/Textures/Hand_Normal.jpg",
+        "size_bytes": 692658,
+        "sha256": "f3bfa5d21d38cf55284e2acae282784052e9a9a7584310b9f19282ee79516492",
+        "raw_url": "https://raw.githubusercontent.com/henningpohl/Hafnia-Hands/c9753a9912046d93d4733865ab7784a17c3460c4/Hand%20models/Controller%20hands/Textures/Hand_Normal.jpg",
+        "license": "MIT",
+        "license_file_relative_path": "Licenses/HafniaHands_MIT.txt"
+      },
+      {
+        "name": "Hand_Roughness.jpg",
+        "local_path": "模型/第一人称双手/Sources/Hand_Roughness.jpg",
+        "upstream_path": "Hand models/Controller hands/Textures/Hand_Roughness.jpg",
+        "size_bytes": 61972,
+        "sha256": "948c785b28b6791b77189edbd5a2d230ebc642ffcb1cb42b6ca6410e12836277",
+        "raw_url": "https://raw.githubusercontent.com/henningpohl/Hafnia-Hands/c9753a9912046d93d4733865ab7784a17c3460c4/Hand%20models/Controller%20hands/Textures/Hand_Roughness.jpg",
+        "license": "MIT",
+        "license_file_relative_path": "Licenses/HafniaHands_MIT.txt"
+      },
+      {
+        "name": "Hand_AO.jpg",
+        "local_path": "模型/第一人称双手/Sources/Hand_AO.jpg",
+        "upstream_path": "Hand models/Controller hands/Textures/Hand_AO.jpg",
+        "size_bytes": 136975,
+        "sha256": "3dc377e1cd77cff491ef01a481456b12d0b26ab6ce34c3d0402ac94da5873bc3",
+        "raw_url": "https://raw.githubusercontent.com/henningpohl/Hafnia-Hands/c9753a9912046d93d4733865ab7784a17c3460c4/Hand%20models/Controller%20hands/Textures/Hand_AO.jpg",
+        "license": "MIT",
+        "license_file_relative_path": "Licenses/HafniaHands_MIT.txt"
+      }
+    ],
+    "not_downloaded_upstream_files": [
+      {
+        "name": "Hand_Metallic.jpg",
+        "upstream_path": "Hand models/Controller hands/Textures/Hand_Metallic.jpg",
+        "git_blob_sha": "dccaf7c01e9a06c77bfc333ec5b851c141516ab4",
+        "size_bytes": 49484,
+        "note": "上游存在但本项目未下载；MetallicSmoothness 由本项目烘焙流程产生。"
+      }
+    ]
+  },
+  "license_files": [
+    {
+      "name": "HafniaHands_MIT.txt",
+      "relative_path": "Licenses/HafniaHands_MIT.txt",
+      "upstream_path": "LICENSE",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2021 Aske Mottelson",
+      "size_bytes": 1071,
+      "sha256": "d7ba0627bf8242a386f9e1edcb2ff267cff95c62ebbb698ca96620890594adc2"
+    },
+    {
+      "name": "Oculus_SampleFramework_BSD3.txt",
+      "relative_path": "Licenses/Oculus_SampleFramework_BSD3.txt",
+      "upstream_path": "Unity project/Assets/Oculus/SampleFramework/license.txt",
+      "license": "BSD-3-Clause",
+      "copyright": "Copyright (c) Facebook Technologies, LLC and its affiliates. All rights reserved.",
+      "size_bytes": 1641,
+      "sha256": "6c2a263fa5adbd9cd92de7022bf2b4d94fe5aad55050468307137d2e0a99762f",
+      "upstream_git_blob_sha": "f4fd48e2499b00c7790bd4e796b3c66b9a386a9a",
+      "upstream_git_blob_size": 1641,
+      "computed_git_blob_sha": "f4fd48e2499b00c7790bd4e796b3c66b9a386a9a",
+      "byte_identical_to_upstream": true,
+      "encoding_note": "该文件原始字节含 cp1252 弯引号（0x93/0x94）。按 UTF-8 解码显示时会出现 2 个替换字符 U+FFFD，但这仅为显示/解码表现；按 Git 对象格式重算，本地副本 blob SHA = f4fd48e2499b00c7790bd4e796b3c66b9a386a9a，与上游 license.txt 完全一致，故逐字节等同。"
+    }
+  ],
+  "distribution_obligations": {
+    "must_retain_license_texts": [
+      "Licenses/HafniaHands_MIT.txt",
+      "Licenses/Oculus_SampleFramework_BSD3.txt"
+    ],
+    "mit": {
+      "applies_to": "皮肤贴图",
+      "obligation": "上述版权声明与本许可声明须包含在软件的所有副本或实质性部分中。"
+    },
+    "bsd_3_clause": {
+      "applies_to": "基础手网格",
+      "obligations": [
+        "源码形式再分发：必须保留版权声明、条件列表与免责声明。",
+        "二进制形式再分发：必须在文档和/或随分发提供的材料中复制版权声明、条件列表与免责声明。",
+        "不得使用 Facebook Technologies LLC、Oculus 或其贡献者的名称认可或推广本衍生作品，除非事先获得书面许可。"
+      ]
+    },
+    "third_party_logo_policy": {
+      "game_screen": "仅在游戏画面中排除第三方 Logo（不呈现 Oculus / Facebook / Meta 等第三方品牌标识）。",
+      "license_attribution": "不删除许可署名：实现画面排除时，不得删除或改写 Licenses/ 下的许可原文，也不得移除登记文档中的署名与版权信息。画面不展示 ≠ 许可不署名。",
+      "brand_imagery": "本资产所用贴图与网格中不含第三方品牌图案、Logo 或水印。"
+    }
+  },
+  "evidence": {
+    "method": "对 Sources/ 下 6 个下载文件按 Git 对象格式 (blob <size>\\0<content>) 重算 SHA-1，与固定提交的递归树快照上的 blob SHA 比对；同时计算文件的 SHA256。",
+    "tree_snapshot": {
+      "file": "Sources/upstream_tree.json",
+      "size_bytes": 1322988,
+      "sha256": "b34148fea31ddf7316e2d1f3b489b7db71ec8bcd46eb75fa02f49d024ac893e7",
+      "api_url": "https://api.github.com/repos/henningpohl/Hafnia-Hands/git/trees/c9753a9912046d93d4733865ab7784a17c3460c4",
+      "tree_sha": "c9753a9912046d93d4733865ab7784a17c3460c4",
+      "truncated": false,
+      "entry_count": 3693
+    },
+    "byte_identical_verification": [
+      {
+        "name": "l_hand_skeletal_lowres.fbx",
+        "size_bytes": 258784,
+        "computed_git_blob_sha": "2d0bcc6ffe77e0860bc647152de81159395382bd",
+        "upstream_git_blob_sha": "2d0bcc6ffe77e0860bc647152de81159395382bd",
+        "match": true
+      },
+      {
+        "name": "r_hand_skeletal_lowres.fbx",
+        "size_bytes": 262336,
+        "computed_git_blob_sha": "ac7fcc22f61ce651f1203e48ac1ce903a4ca1bd9",
+        "upstream_git_blob_sha": "ac7fcc22f61ce651f1203e48ac1ce903a4ca1bd9",
+        "match": true
+      },
+      {
+        "name": "Hand_BaseColor.jpg",
+        "size_bytes": 221047,
+        "computed_git_blob_sha": "ab8455c8cee96340ebc8bdd58107209562f67596",
+        "upstream_git_blob_sha": "ab8455c8cee96340ebc8bdd58107209562f67596",
+        "match": true
+      },
+      {
+        "name": "Hand_Normal.jpg",
+        "size_bytes": 692658,
+        "computed_git_blob_sha": "13b0eeb3a71e9f115bbe97d02d501c66f12df0db",
+        "upstream_git_blob_sha": "13b0eeb3a71e9f115bbe97d02d501c66f12df0db",
+        "match": true
+      },
+      {
+        "name": "Hand_Roughness.jpg",
+        "size_bytes": 61972,
+        "computed_git_blob_sha": "a1d121c5a0dadf4040449034ca2083c979100aea",
+        "upstream_git_blob_sha": "a1d121c5a0dadf4040449034ca2083c979100aea",
+        "match": true
+      },
+      {
+        "name": "Hand_AO.jpg",
+        "size_bytes": 136975,
+        "computed_git_blob_sha": "1e449a991a88450b688f4842d6954173cf6f483a",
+        "upstream_git_blob_sha": "1e449a991a88450b688f4842d6954173cf6f483a",
+        "match": true
+      }
+    ],
+    "path_identity_evidence": {
+      "claim": "基础手网格属 Oculus SampleFramework BSD-3-Clause 资产。",
+      "shared_git_objects": [
+        {
+          "file": "l_hand_skeletal_lowres.fbx",
+          "git_blob_sha": "2d0bcc6ffe77e0860bc647152de81159395382bd",
+          "paths": [
+            "Hand models/Controller hands/Models/l_hand_skeletal_lowres.fbx",
+            "Unity project/Assets/Oculus/SampleFramework/Core/CustomHands/Models/l_hand_skeletal_lowres.fbx",
+            "Unity project/Assets/Hand/l_hand_skeletal_lowres (1).fbx"
+          ]
+        },
+        {
+          "file": "r_hand_skeletal_lowres.fbx",
+          "git_blob_sha": "ac7fcc22f61ce651f1203e48ac1ce903a4ca1bd9",
+          "paths": [
+            "Hand models/Controller hands/Models/r_hand_skeletal_lowres.fbx",
+            "Unity project/Assets/Oculus/SampleFramework/Core/CustomHands/Models/r_hand_skeletal_lowres.fbx",
+            "Unity project/Assets/Hand/r_hand_skeletal_lowres (1).fbx"
+          ]
+        }
+      ],
+      "oculus_license_path": "Unity project/Assets/Oculus/SampleFramework/license.txt",
+      "oculus_license_git_blob_sha": "f4fd48e2499b00c7790bd4e796b3c66b9a386a9a"
+    },
+    "texture_license_scoping_evidence": {
+      "claim": "皮肤贴图适用 Hafnia MIT，与 Oculus 贴图目录无重叠。",
+      "shared_git_objects": [
+        {
+          "file": "Hand_BaseColor.jpg",
+          "git_blob_sha": "ab8455c8cee96340ebc8bdd58107209562f67596",
+          "paths": [
+            "Hand models/Controller hands/Textures/Hand_BaseColor.jpg",
+            "Unity project/Assets/Hand/Hand Texture/Hand_BaseColor.jpg"
+          ]
+        },
+        {
+          "file": "Hand_Normal.jpg",
+          "git_blob_sha": "13b0eeb3a71e9f115bbe97d02d501c66f12df0db",
+          "paths": [
+            "Hand models/Controller hands/Textures/Hand_Normal.jpg",
+            "Unity project/Assets/Hand/Hand Texture/Hand_Normal.jpg"
+          ]
+        },
+        {
+          "file": "Hand_Roughness.jpg",
+          "git_blob_sha": "a1d121c5a0dadf4040449034ca2083c979100aea",
+          "paths": [
+            "Hand models/Controller hands/Textures/Hand_Roughness.jpg",
+            "Unity project/Assets/Hand/Hand Texture/Hand_Roughness.jpg"
+          ]
+        },
+        {
+          "file": "Hand_AO.jpg",
+          "git_blob_sha": "1e449a991a88450b688f4842d6954173cf6f483a",
+          "paths": [
+            "Hand models/Controller hands/Textures/Hand_AO.jpg",
+            "Unity project/Assets/Hand/Hand Texture/Hand_AO.jpg"
+          ]
+        }
+      ],
+      "oculus_hand_texture_dir": "Unity project/Assets/Oculus/SampleFramework/Core/CustomHands/Textures/",
+      "oculus_hand_texture_dir_contents": [
+        "Hands_stripes_01.png",
+        "noise_01.png",
+        "ramp_02.png",
+        "ramp_bluewhite_01.png",
+        "ramp_bluewhite_02.png",
+        "ramp_toon_01.png"
+      ],
+      "conclusion": "该 Oculus 目录不含 Hand_*.jpg，故皮肤贴图不属 Oculus 分发内容。"
+    },
+    "license_file_byte_identity": {
+      "file": "Licenses/Oculus_SampleFramework_BSD3.txt",
+      "size_bytes": 1641,
+      "computed_git_blob_sha": "f4fd48e2499b00c7790bd4e796b3c66b9a386a9a",
+      "upstream_path": "Unity project/Assets/Oculus/SampleFramework/license.txt",
+      "upstream_git_blob_sha": "f4fd48e2499b00c7790bd4e796b3c66b9a386a9a",
+      "match": true,
+      "note": "本地许可原文与上游逐字节一致，可直接作为 BSD-3-Clause 分发义务的合规依据。"
+    }
+  },
+  "derivative_work": {
+    "process": "Blender 5.2 via local Blender MCP on port 9876",
+    "modifications": [
+      "米制比例与第一人称摆位",
+      "整理手部拓扑并细分一次",
+      "新增连续小臂与封闭端面",
+      "重建小臂、手腕与手指骨架并归一化四骨骼权重",
+      "共享 UV 与 2K PBR 烘焙",
+      "Unity +Z 正向 FBX 和 URP Prefab"
+    ],
+    "triangles": 18616,
+    "vertices": 9312,
+    "meshes": 2,
+    "bones": 37,
+    "deform_bones": 36,
+    "texture_resolution": [
+      2048,
+      2048
+    ],
+    "derived_textures": [
+      {
+        "path": "Textures/T_FPHands_01_AO.png",
+        "size_bytes": 1266870,
+        "sha256": "6dee1f66a7feea4236bbb35ff524dfbc5cf483ab9e9927e14354505f7a6e6d80"
+      },
+      {
+        "path": "Textures/T_FPHands_01_BaseColor.png",
+        "size_bytes": 1653092,
+        "sha256": "1b794d86374a33145af87a23a095bda739200fe87c8d63e1a65d5b941cf7e389"
+      },
+      {
+        "path": "Textures/T_FPHands_01_MetallicSmoothness.png",
+        "size_bytes": 145068,
+        "sha256": "95c02260fb67587e8ba030ee7c7ad857002df91f753d67a6335f535630f3f49e"
+      },
+      {
+        "path": "Textures/T_FPHands_01_Normal.png",
+        "size_bytes": 3086554,
+        "sha256": "1e114cbcde1987448d4423f2683bbfbcbd2bbc1832cd15131ddfc7af08ffe6bd"
+      },
+      {
+        "path": "Textures/T_FPHands_01_Roughness.png",
+        "size_bytes": 131257,
+        "sha256": "db94b8c9e836fd4f2521ed59b34017308ec6addca8259aa1e59d5359cd3ea943"
+      }
+    ],
+    "scripts": [
+      {
+        "path": "Scripts/bake_pbr.py",
+        "size_bytes": 5194,
+        "sha256": "e05d2802f27c30b1bfa671fc030db6da70895c64e8b5bb4b881675069abd483c"
+      },
+      {
+        "path": "Scripts/build_fp_hands.py",
+        "size_bytes": 13666,
+        "sha256": "c5d6004b582ecb20879bebdb3f142508c12045881f10204bf5e2aa618e2f0148"
+      },
+      {
+        "path": "Scripts/export_unity_fbx.py",
+        "size_bytes": 1662,
+        "sha256": "1c579b83870cb487f3e96421733b10d878b797016787bee22f7b41e1f045b8a4"
+      },
+      {
+        "path": "Scripts/forearm_geometry.py",
+        "size_bytes": 8754,
+        "sha256": "4619bb15c004906adcc103bf332fe8256504a7d28ad7f771552897c83943c529"
+      },
+      {
+        "path": "Scripts/HandsQA.cs",
+        "size_bytes": 10232,
+        "sha256": "ccd8d822a1b84461833d4e5aa8e15e83c3f473b501dc74dc254e39d33d60b07f"
+      },
+      {
+        "path": "Scripts/validate_export.py",
+        "size_bytes": 6654,
+        "sha256": "fcb54eb25ad9f79323e58b57421c94dbfaff32eacc12bdf9de9523e074431146"
+      }
+    ],
+    "delivery_manifest": "QA/delivery_manifest.json"
+  },
+  "supporting_files": [
+    {
+      "name": "README.md",
+      "relative_path": "Sources/README.md",
+      "size_bytes": 994,
+      "sha256": "f4998f95e358da994093215373f9b029b808a667bd5387da2ebccbf9a1f07354",
+      "note": "上游 README 原文，含论文引用要求与 BibTeX。"
+    },
+    {
+      "name": "import_report.json",
+      "relative_path": "Sources/import_report.json",
+      "size_bytes": 23847,
+      "sha256": "7fa7fc07ae02614425560fd3f4cfdab51fddabec88e3e730ae46165e2f823ad9",
+      "note": "Blender 导入校验报告。"
+    }
+  ]
+}

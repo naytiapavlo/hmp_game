@@ -1,0 +1,3 @@
+# Deliverable asset package; override the repository's generated-package rule.
+!FPHands_URP.unitypackage
+*.blend1
