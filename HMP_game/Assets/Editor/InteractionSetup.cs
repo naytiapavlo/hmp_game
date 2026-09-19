@@ -22,7 +22,6 @@ using UnityEngine.SceneManagement;
 public static class InteractionSetup
 {
     private const string ReportPath = "Library/InteractionSetup.json";
-    private const string MarkerPath = "Library/InteractionSetup.done";
     private const string LayerName = "Interactable";
     private const int PreferredLayerIndex = 6;
 
@@ -68,11 +67,23 @@ public static class InteractionSetup
     static InteractionSetup()
     {
         EditorApplication.delayCall += Run;
+        // 多场景支持：项目现有 初始界面 / 办公室场景 等多个场景，每次打开场景后
+        // 检查「当前场景」是否已装配（标记按场景名区分），新场景打开即自动装配
+        EditorApplication.sceneOpened += _ => Run();
+    }
+
+    // 每个场景独立的完成标记：Library/InteractionSetup.<场景名>.done
+    private static string MarkerPathFor(Scene scene)
+    {
+        return "Library/InteractionSetup." + scene.name + ".done";
     }
 
     public static void Run()
     {
-        if (File.Exists(MarkerPath)) return;
+        Scene scene = SceneManager.GetActiveScene();
+        if (string.IsNullOrEmpty(scene.name)) return; // 未保存的临时场景不处理
+        string markerPath = MarkerPathFor(scene);
+        if (File.Exists(markerPath)) return;
         if (EditorApplication.isCompiling || EditorApplication.isUpdating)
         {
             EditorApplication.delayCall += Run;
@@ -107,15 +118,20 @@ public static class InteractionSetup
             Debug.LogException(e);
         }
 
-        if (processed) File.WriteAllText(MarkerPath, DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture));
-        Debug.Log("InteractionSetup finished. processed=" + processed + " error=" + (error ?? "none")
+        if (processed) File.WriteAllText(markerPath, DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture));
+        Debug.Log("InteractionSetup finished. scene=" + scene.name + " processed=" + processed + " error=" + (error ?? "none")
                   + " report=" + ReportPath);
     }
 
     [MenuItem("Tools/Interactable/Re-run Interaction Setup")]
     public static void ForceRerun()
     {
-        if (File.Exists(MarkerPath)) File.Delete(MarkerPath);
+        Scene scene = SceneManager.GetActiveScene();
+        if (!string.IsNullOrEmpty(scene.name))
+        {
+            string markerPath = MarkerPathFor(scene);
+            if (File.Exists(markerPath)) File.Delete(markerPath);
+        }
         Run();
     }
 
