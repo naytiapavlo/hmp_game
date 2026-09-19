@@ -1,0 +1,7 @@
+Derived from Hafnia Hands, https://github.com/henningpohl/Hafnia-Hands (commit c9753a9912046d93d4733865ab7784a17c3460c4).
+Hand meshes: Copyright Facebook Technologies, LLC and its affiliates; BSD-3-Clause.
+Skin textures: Copyright (c) 2021 Aske Mottelson; MIT.
+Hafnia project: Henning Pohl and Aske Mottelson. Texture artist credited by the paper: Ranjeet Singh.
+Pohl H, Mottelson A (2022), Hafnia Hands, doi:10.3389/frvir.2022.719506.
+Adaptation: continuous forearms, topology refinement, replacement skeleton, shared PBR atlas.
+Retain both full licenses provided in Licenses when distributing this asset.
