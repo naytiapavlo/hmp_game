@@ -1,0 +1,24 @@
+SM_Cup_01 水杯（交互道具）资产来源登记
+========================================
+
+模型：SM_Cup_01.fbx
+- 交付方：GPT Astra（2026-09-19），原文件名「杯子.fbx」
+- 上游来源：PolyHaven「jug_01」（https://polyhaven.com/a/jug_01）
+- 许可：CC0（公共领域，可商用，无需署名）
+- FBX 内引用了外部贴图（PolyHavenAssets/jug_01/textures/…）但交付时未随附贴图文件
+
+贴图：Textures/T_Cup_01_*.jpg（共 5 张，1K）
+- 因 Astra 交付缺贴图，由 GLM-5.3 按 FBX 内引用名直接从 PolyHaven 官方 CDN 补齐（CC0）：
+  BaseColor / Normal(OpenGL) / Metallic / Roughness / AO
+- 下载源：https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/jug_01/
+- MD5 校验可对照 https://api.polyhaven.com/files/jug_01
+
+材质：Materials/MAT_Cup_01.mat
+- Unity 侧由 InteractionSetup 自动生成（URP Lit）
+- 当前接了 BaseColor / Normal / AO；陶瓷件 Metallic=0、Smoothness=0.35（标量近似，
+  未做 Roughness→Smoothness 的通道打包，待 Astra 正式材质交付后替换）
+
+待办（Astra）：
+1. 补交正式交付贴图与 .blend 源文件（当前仓库 模型/办公室场景/ 只有 FBX）
+2. 在《资产来源登记》正式登记本资产
+3. 确认该 jug_01（陶瓷水罐）即项目所需「办公水杯」——若需马克杯样式需重新交付

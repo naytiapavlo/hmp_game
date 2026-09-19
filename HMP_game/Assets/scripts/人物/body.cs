@@ -19,6 +19,12 @@ public class body : MonoBehaviour
     [Tooltip("玩家控制总开关：关闭后停止移动与转视角，并释放鼠标光标（默认开）")]
     public bool controlEnabled = true;
 
+    [Header("交互系统状态（由 SeatController 等交互组件在运行时驱动，一般无需手动修改）")]
+    [Tooltip("移动锁：为 true 时冻结位移（如坐姿、坐下/起身过渡期间），但保留视角转动")]
+    [SerializeField] private bool movementLocked = false;
+    [Tooltip("视角锁：为 true 时冻结鼠标视角（仅在坐下/起身的短过渡中使用，防止和插值打架）")]
+    [SerializeField] private bool lookLocked = false;
+
     [Header("移动参数")]
     [Tooltip("行走速度（米/秒，真实尺度；正常步行约 1.4，快走约 2，跑动约 5）")]
     [SerializeField] private float walkSpeed = 1.4f;
@@ -77,8 +83,31 @@ public class body : MonoBehaviour
         // 总开关关闭：不移动、不转视角（Play 模式下可在 Inspector 实时勾选切换）
         if (!controlEnabled) return;
 
-        HandleLook();
-        HandleMovement();
+        // 交互状态：坐姿等场景只锁移动不锁视角；过渡瞬间连视角也短暂锁定
+        if (!lookLocked) HandleLook();
+        if (!movementLocked) HandleMovement();
+    }
+
+    // ==== 交互系统接口（供 Interactor / SeatController 调用，基础控制逻辑不变） ====
+
+    // 移动锁当前状态（坐姿期间为 true）
+    public bool MovementLocked => movementLocked;
+
+    // 眼睛相机只读引用（交互射线、HUD 都从它发出）
+    public Camera PlayerCamera => playerCamera;
+
+    // 当前俯仰角（度）：坐下过渡时 SeatController 读取并缓动到 0
+    public float Pitch => pitch;
+
+    public void SetMovementLocked(bool locked) => movementLocked = locked;
+
+    public void SetLookLocked(bool locked) => lookLocked = locked;
+
+    // 直接设置俯仰角（坐下/起身过渡用）：同时更新缓存值和相机姿态，避免与 HandleLook 冲突
+    public void SetPitch(float pitchDeg)
+    {
+        pitch = Mathf.Clamp(pitchDeg, minPitch, maxPitch);
+        if (playerCamera != null) playerCamera.transform.localRotation = Quaternion.Euler(pitch, 0f, 0f);
     }
 
     // 根据总开关锁定/释放鼠标：开启时锁定并隐藏光标（第一人称标准行为），
