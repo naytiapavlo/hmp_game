@@ -69,7 +69,7 @@ public static class InteractionSetup
         EditorApplication.delayCall += Run;
         // 多场景支持：项目现有 初始界面 / 办公室场景 等多个场景，每次打开场景后
         // 检查「当前场景」是否已装配（标记按场景名区分），新场景打开即自动装配
-        EditorApplication.sceneOpened += _ => Run();
+        EditorSceneManager.sceneOpened += (scene, mode) => Run();
     }
 
     // 每个场景独立的完成标记：Library/InteractionSetup.<场景名>.done
