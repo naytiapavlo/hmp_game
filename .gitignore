@@ -8,7 +8,8 @@
 [Uu]ser[Ss]ettings/
 [Mm]emoryCaptures/
 [Rr]ecordings/
-/[Aa]ssets/_Recovery/
+[Aa]ssets/_Recovery/
+[Aa]ssets/_Recovery.meta
 
 # ===== IDE 生成文件 =====
 .vs/
