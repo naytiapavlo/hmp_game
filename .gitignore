@@ -46,3 +46,7 @@ crashlytics-build.properties
 .DS_Store
 Thumbs.db
 *~
+
+# Unity 升级日志（编辑器生成）
+[Hh]MP_game/UpgradeLog.htm
+UpgradeLog.htm
