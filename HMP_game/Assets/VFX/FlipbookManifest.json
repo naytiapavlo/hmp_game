@@ -1,0 +1,135 @@
+{
+  "T_Fire_Small_8x8": {
+    "frames": 64,
+    "tiles": [
+      8,
+      8
+    ],
+    "size": [
+      2048,
+      2048
+    ],
+    "crop": [
+      47,
+      48,
+      82,
+      126
+    ],
+    "nonempty": true,
+    "unique_frames": 64
+  },
+  "T_Smoke_Small_8x8": {
+    "frames": 64,
+    "tiles": [
+      8,
+      8
+    ],
+    "size": [
+      2048,
+      2048
+    ],
+    "crop": [
+      45,
+      11,
+      83,
+      125
+    ],
+    "nonempty": true,
+    "unique_frames": 64
+  },
+  "T_Fire_Medium_8x8": {
+    "frames": 64,
+    "tiles": [
+      8,
+      8
+    ],
+    "size": [
+      2048,
+      2048
+    ],
+    "crop": [
+      36,
+      63,
+      93,
+      127
+    ],
+    "nonempty": true,
+    "unique_frames": 64
+  },
+  "T_Smoke_Medium_8x8": {
+    "frames": 64,
+    "tiles": [
+      8,
+      8
+    ],
+    "size": [
+      2048,
+      2048
+    ],
+    "crop": [
+      35,
+      11,
+      93,
+      126
+    ],
+    "nonempty": true,
+    "unique_frames": 64
+  },
+  "T_Fire_Large_8x8": {
+    "frames": 64,
+    "tiles": [
+      8,
+      8
+    ],
+    "size": [
+      2048,
+      2048
+    ],
+    "crop": [
+      28,
+      75,
+      100,
+      127
+    ],
+    "nonempty": true,
+    "unique_frames": 64
+  },
+  "T_Smoke_Large_8x8": {
+    "frames": 64,
+    "tiles": [
+      8,
+      8
+    ],
+    "size": [
+      2048,
+      2048
+    ],
+    "crop": [
+      27,
+      17,
+      100,
+      127
+    ],
+    "nonempty": true,
+    "unique_frames": 64
+  },
+  "T_Smoke_SmokeOnly_8x8": {
+    "frames": 64,
+    "tiles": [
+      8,
+      8
+    ],
+    "size": [
+      2048,
+      2048
+    ],
+    "crop": [
+      45,
+      11,
+      83,
+      126
+    ],
+    "nonempty": true,
+    "unique_frames": 64
+  }
+}
