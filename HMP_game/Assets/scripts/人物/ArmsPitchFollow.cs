@@ -24,11 +24,19 @@ public class ArmsPitchFollow : MonoBehaviour
     [Tooltip("俯仰死区（度）：小范围抬头低头手臂不动，减少晃动感")]
     [SerializeField] private float deadZone = 6f;
 
-    [Header("持物锚点贴合（真实手部）")]
-    [Tooltip("单手物品锚点沿掌心方向离腕骨的距离（米）：0=腕关节，约 0.07=掌心")]
-    [SerializeField] private float handGripOffset = 0.07f;
-    [Tooltip("双手物品锚点离双腕中点向前的距离（米）")]
+    [Header("持物锚点贴合（掌面坐标系）")]
+    [Tooltip("单手物品锚点沿掌心方向（腕→中指根）离腕骨的距离（米）")]
+    [SerializeField] private float gripAlongDist = 0.06f;
+    [Tooltip("单手物品锚点沿掌面法线的偏移（米）：物品在手背一侧就翻正负号。（实测：-0.035 为掌侧）")]
+    [SerializeField] private float gripNormalDist = -0.035f;
+    [Tooltip("双手物品锚点离双腕中点沿掌心方向的距离（米）")]
     [SerializeField] private float carryGripOffset = 0.10f;
+
+    [Header("手臂收纳（减少占屏，Play 模式实时调）")]
+    [Tooltip("手臂根相对场景基准位置的偏移（支点局部空间，随俯仰一起转）：y 负=下沉，z 负=向后收（离镜头更远更小）。（实测调优值）")]
+    [SerializeField] private Vector3 armTuckOffset = new Vector3(0f, -0.2f, -0.2f);
+    [Tooltip("手臂根相对基准姿态的附加旋转（度）：x 负=手臂向下俯、从视野中央收走")]
+    [SerializeField] private Vector3 armTuckRotation = new Vector3(-12f, 0f, 0f);
 
     /// <summary>均匀缩放旋转支点（Awake 时创建）；Interactor 的持物锚点挂这里</summary>
     public Transform Pivot { get; private set; }
@@ -38,6 +46,8 @@ public class ArmsPitchFollow : MonoBehaviour
     private HandPoseController hands;       // 与本组件同挂在 FPHands_01 上
     private Transform rightHandAnchor;      // Pivot 下的两个持物锚点（懒查找）
     private Transform carryAnchor;
+    private Vector3 armsBaseLocalPos;       // 手臂根挪入支点后的基准局部姿态（收纳微调叠加在其上）
+    private Quaternion armsBaseLocalRot;
 
     private void Awake()
     {
@@ -61,8 +71,10 @@ public class ArmsPitchFollow : MonoBehaviour
                         : playerBody.transform.position + Vector3.up * 0.65f;
         Pivot.rotation = playerBody.transform.rotation; // 对齐当前 yaw，保证挪入后外观不变
 
-        // 手臂整体挪入 pivot（保留世界变换，外观零变化）
+        // 手臂整体挪入 pivot（保留世界变换，外观零变化），并记录基准局部姿态
         transform.SetParent(Pivot, true);
+        armsBaseLocalPos = transform.localPosition;
+        armsBaseLocalRot = transform.localRotation;
     }
 
     private void LateUpdate()
@@ -84,21 +96,36 @@ public class ArmsPitchFollow : MonoBehaviour
         float sink = Mathf.Clamp(-effective, 0f, 90f) * sinkPerDegree;
         if (sink > 0f) Pivot.position += Vector3.down * sink;
 
+        // 手臂收纳：在基准姿态上叠加固定偏移/旋转（支点局部空间，随俯仰旋转，
+        // 任何视角下手臂相对画面收在下方，不会因为低头抬头又伸回屏幕中央）
+        transform.localPosition = armsBaseLocalPos + armTuckOffset;
+        transform.localRotation = armsBaseLocalRot * Quaternion.Euler(armTuckRotation);
+
         TrackAnchorsToHands();
     }
 
-    // 持物锚点贴合真实手部：单手物 = 右腕骨沿掌心方向前移 handGripOffset；
-    // 双手物 = 双腕中点沿平均掌心方向前移 carryGripOffset。锚点旋转保持随支点
-    // （物品在视野里直立），位置跟手——物品自然坐在手心，不漂浮不穿模，
-    // 且手势（推门/扶椅）摆动腕骨时物品跟着手一起动。
+    // 持物锚点贴合真实手部（掌面坐标系）：
+    //   单手物 = 右腕 + 掌心方向×gripAlongDist + 掌面法线×gripNormalDist，
+    //            落在卷曲手指围成的握持区（掌心一侧），侧面持握水杯；
+    //   双手物 = 双腕中点沿平均掌心方向前移 carryGripOffset，抱在两手之间。
+    // 锚点旋转保持随支点（物品在视野里直立），位置跟手；手势摆动腕骨时物品跟手一起动。
     private void TrackAnchorsToHands()
     {
         if (hands == null || Pivot == null) return;
         if (rightHandAnchor == null) { Transform t = Pivot.Find("Anchor_RHand"); if (t != null) rightHandAnchor = t; }
         if (carryAnchor == null) { Transform t = Pivot.Find("Anchor_Carry"); if (t != null) carryAnchor = t; }
 
-        if (rightHandAnchor != null && hands.TryGetHandFrame(true, out Vector3 wristR, out Vector3 palmR))
-            rightHandAnchor.position = wristR + palmR * handGripOffset;
+        // 锚点旋转只跟随水平朝向（yaw），不随俯仰——持物在世界坐标里保持直立：
+        // 低头从桌上拿起物品的瞬间，物品不会跟着视线前倾 40°（之前“杯口朝前”
+        // 的根源），掌心从侧面握住物品
+        Quaternion yawRot = playerBody.transform.rotation;
+
+        if (rightHandAnchor != null
+            && hands.TryGetPalmFrame(true, out Vector3 wristR, out Vector3 alongR, out Vector3 normalR))
+        {
+            rightHandAnchor.position = wristR + alongR * gripAlongDist + normalR * gripNormalDist;
+            rightHandAnchor.rotation = yawRot;
+        }
 
         if (carryAnchor != null
             && hands.TryGetHandFrame(false, out Vector3 wristL, out Vector3 palmL)
@@ -108,6 +135,7 @@ public class ArmsPitchFollow : MonoBehaviour
             Vector3 palmAvg = palmL + palmR2;
             if (palmAvg.sqrMagnitude < 1e-6f) palmAvg = Vector3.forward;
             carryAnchor.position = mid + palmAvg.normalized * carryGripOffset;
+            carryAnchor.rotation = yawRot;
         }
     }
 }

@@ -54,11 +54,15 @@ public class HandPoseController : MonoBehaviour
     // 撑压手势（扶椅）：坐下/起身时双手向下向外扶住扶手/椅面（四指半收）
     private static readonly float[] PressFinger = { -15f, -20f, -12f };
     private static readonly float[] PressThumb = { -8f, -8f, 0f };
-    // 腕部姿态（度，绕腕骨局部欧拉角）：交互时手部整体的动作感
-    private static readonly Vector3 GripWrist = new Vector3(-18f, 12f, 0f);
-    private static readonly Vector3 CarryWrist = new Vector3(-24f, 18f, 0f);
+    // 腕部姿态（度，绕腕骨局部欧拉角）：推门/扶椅为固定值；抓握/托举暴露成可调参数
     private static readonly Vector3 PushWrist = new Vector3(-32f, 0f, 0f);
     private static readonly Vector3 PressWrist = new Vector3(26f, 0f, 0f);
+
+    [Header("腕部姿态（度，Play 模式实时调）")]
+    [Tooltip("抓握腕部欧拉：x=俯仰（负=下压，别太负否则手腕下卷），y=偏航，z=翻滚（让掌心转向身体一侧，侧面持握的关键）")]
+    [SerializeField] private Vector3 gripWristEuler = new Vector3(-6f, 12f, 20f);
+    [Tooltip("托举腕部欧拉（双手抱物，掌心相向）")]
+    [SerializeField] private Vector3 carryWristEuler = new Vector3(-10f, 14f, 18f);
 
     // 每手：5指×3节 + 腕 + 前臂，双手共 34
     private const int ExpectedBoneCount = 34;
@@ -66,8 +70,12 @@ public class HandPoseController : MonoBehaviour
     // 供持物锚点贴合手部用（ArmsPitchFollow 每帧查询）
     public Transform WristLeft { get; private set; }
     public Transform WristRight { get; private set; }
-    private Transform middleBaseLeft;   // Middle.01.L，中指根：用于求“腕→掌心”方向
+    private Transform middleBaseLeft;   // Middle.01.*：掌心延长方向
     private Transform middleBaseRight;
+    private Transform indexBaseLeft;    // Index.01.* 与 Little.01.*：掌面横轴 → 掌面法线
+    private Transform indexBaseRight;
+    private Transform littleBaseLeft;
+    private Transform littleBaseRight;
 
     private readonly Dictionary<Transform, Quaternion> defaultRots = new Dictionary<Transform, Quaternion>();
     private readonly Dictionary<Transform, Quaternion> targetRots = new Dictionary<Transform, Quaternion>();
@@ -126,6 +134,33 @@ public class HandPoseController : MonoBehaviour
         return true;
     }
 
+    // 掌面坐标系查询：腕位置 + 掌心方向(腕→中指根) + 掌面法线(中指×小指方向叉积)。
+    // 物品锚点 = 腕 + 掌心方向×along + 法线×normal，落在卷曲手指围成的握持区里；
+    // 法线朝掌侧还是背侧取决于骨骼轴定义，normalDist 支持正负号翻转来修正。
+    public bool TryGetPalmFrame(bool right, out Vector3 wristPos, out Vector3 along, out Vector3 normal)
+    {
+        Transform wrist = right ? WristRight : WristLeft;
+        Transform middle = right ? middleBaseRight : middleBaseLeft;
+        Transform index = right ? indexBaseRight : indexBaseLeft;
+        Transform little = right ? littleBaseRight : littleBaseLeft;
+        if (wrist == null || middle == null || index == null || little == null)
+        {
+            wristPos = Vector3.zero;
+            along = Vector3.forward;
+            normal = Vector3.up;
+            return false;
+        }
+        wristPos = wrist.position;
+        Vector3 alongV = middle.position - wrist.position;
+        along = alongV.sqrMagnitude > 1e-6f ? alongV.normalized : Vector3.forward;
+        Vector3 acrossV = little.position - index.position;
+        Vector3 across = acrossV.sqrMagnitude > 1e-6f ? acrossV.normalized : Vector3.right;
+        normal = Vector3.Cross(along, across);
+        if (normal.sqrMagnitude < 1e-6f) normal = Vector3.up;
+        else normal.Normalize();
+        return true;
+    }
+
     // 计算某块骨骼在某姿态下的局部旋转偏移
     private Quaternion OffsetFor(string boneName, Pose pose, bool isRight)
     {
@@ -145,8 +180,8 @@ public class HandPoseController : MonoBehaviour
 
         if (boneName.StartsWith("Wrist"))
         {
-            Vector3 w = pose == Pose.Grip ? GripWrist
-                      : pose == Pose.Carry ? CarryWrist
+            Vector3 w = pose == Pose.Grip ? gripWristEuler
+                      : pose == Pose.Carry ? carryWristEuler
                       : pose == Pose.Push ? PushWrist
                       : PressWrist;
             if (isRight && mirrorRightHand) w = new Vector3(w.x, -w.y, -w.z);
@@ -183,11 +218,15 @@ public class HandPoseController : MonoBehaviour
         defaultRots.Clear();
         targetRots.Clear();
 
-        // 腕骨与中指根：持物锚点贴合手部用的定位参考
+        // 腕骨与指根：持物锚点贴合手部用的定位参考
         WristLeft = FindDescendant(transform, "Wrist.L");
         WristRight = FindDescendant(transform, "Wrist.R");
         middleBaseLeft = FindDescendant(transform, "Middle.01.L");
         middleBaseRight = FindDescendant(transform, "Middle.01.R");
+        indexBaseLeft = FindDescendant(transform, "Index.01.L");
+        indexBaseRight = FindDescendant(transform, "Index.01.R");
+        littleBaseLeft = FindDescendant(transform, "Little.01.L");
+        littleBaseRight = FindDescendant(transform, "Little.01.R");
 
         var missing = new List<string>();
         for (int side = 0; side < 2; side++)

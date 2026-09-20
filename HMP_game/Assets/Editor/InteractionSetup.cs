@@ -45,8 +45,9 @@ public static class InteractionSetup
     //      SM_Keyboard_01：临时双手测试物，待 SM_Extinguisher_01 灭火器到位后替换。 ----
     private static readonly PickupConfig[] PickupConfigs =
     {
-        new PickupConfig("SM_Cup_01", PickupItem.CarryMode.OneHand, true, "SM_NotebookPages_01"),
-        new PickupConfig("SM_Keyboard_01", PickupItem.CarryMode.TwoHands, false, null),
+        // HoldRotation：水杯模型的开口轴沿自身 +Z，持握/摆放时绕 X 转 -90° 让杯口朝上
+        new PickupConfig("SM_Cup_01", PickupItem.CarryMode.OneHand, true, "SM_NotebookPages_01", new Vector3(-90f, 0f, 0f)),
+        new PickupConfig("SM_Keyboard_01", PickupItem.CarryMode.TwoHands, false, null, Vector3.zero),
     };
 
     private class PickupConfig
@@ -54,13 +55,15 @@ public static class InteractionSetup
         public readonly string ObjectName;
         public readonly PickupItem.CarryMode Mode;
         public readonly bool EnsureInScene;
-        public readonly string PlaceNearName; // 摆放参考物（放在它旁边）；null = 桌面中央
-        public PickupConfig(string objectName, PickupItem.CarryMode mode, bool ensureInScene, string placeNearName)
+        public readonly string PlaceNearName;  // 摆放参考物（放在它旁边）；null = 桌面中央
+        public readonly Vector3 HoldRotation;  // 持握与摆放时的旋转补偿（欧拉角）
+        public PickupConfig(string objectName, PickupItem.CarryMode mode, bool ensureInScene, string placeNearName, Vector3 holdRotation)
         {
             ObjectName = objectName;
             Mode = mode;
             EnsureInScene = ensureInScene;
             PlaceNearName = placeNearName;
+            HoldRotation = holdRotation;
         }
     }
 
@@ -229,13 +232,16 @@ public static class InteractionSetup
         // 手臂俯仰跟随：低头时手臂转出视野、不露末端断面（见 ArmsPitchFollow.cs）
         var armsFollow = fpHands.GetComponent<ArmsPitchFollow>();
         if (armsFollow == null) armsFollow = fpHands.gameObject.AddComponent<ArmsPitchFollow>();
-        // 已挂组件不会吃到代码里的新默认值（场景序列化值优先），重跑时同步刷新一次
+        // 已挂组件不会吃到代码里的新默认值（场景序列化值优先），重跑时同步刷新一次；
+        // armTuckOffset / gripNormalDist 为实测调优值（用户 Play 模式调定后固化）
         var followSo = new SerializedObject(armsFollow);
         followSo.FindProperty("followFactor").floatValue = 0.85f;
         followSo.FindProperty("sinkPerDegree").floatValue = 0.0015f;
         followSo.FindProperty("deadZone").floatValue = 6f;
+        followSo.FindProperty("armTuckOffset").vector3Value = new Vector3(0f, -0.2f, -0.2f);
+        followSo.FindProperty("gripNormalDist").floatValue = -0.035f;
         followSo.ApplyModifiedPropertiesWithoutUndo();
-        log.Add("HandPoseController + ArmsPitchFollow (factor=0.85) on " + GetHierarchyPath(fpHands));
+        log.Add("HandPoseController + ArmsPitchFollow (factor=0.85, tuck=(0,-0.2,-0.2), gripNormal=-0.035) on " + GetHierarchyPath(fpHands));
     }
 
     private static int SetupDoors(Transform sceneRoot, int layer, List<string> log)
@@ -440,6 +446,14 @@ public static class InteractionSetup
         return new Vector3(Mathf.Clamp(pos.x, b.min.x, b.max.x), pos.y, Mathf.Clamp(pos.z, b.min.z, b.max.z));
     }
 
+    // 物体（含子物体）的世界包围盒
+    private static Bounds WorldBounds(GameObject go)
+    {
+        Bounds bounds = new Bounds(go.transform.position, Vector3.zero);
+        foreach (Renderer r in go.GetComponentsInChildren<Renderer>(true)) bounds.Encapsulate(r.bounds);
+        return bounds;
+    }
+
     private static int SetupPickups(Transform sceneRoot, int layer, List<string> log, Transform playerBody)
     {
         int configured = 0;
@@ -458,12 +472,23 @@ public static class InteractionSetup
             }
             GameObject go = item.gameObject;
 
-            // PickupItem 组件与持握模式
+            // PickupItem 组件与持握模式 + 持握旋转补偿
             var pickup = go.GetComponent<PickupItem>();
             if (pickup == null) pickup = go.AddComponent<PickupItem>();
             var so = new SerializedObject(pickup);
             so.FindProperty("carryMode").enumValueIndex = (int)config.Mode;
+            so.FindProperty("holdRotationOffset").vector3Value = config.HoldRotation;
             so.ApplyModifiedPropertiesWithoutUndo();
+
+            // 场景摆放旋转与持握一致（水杯立起来）；旋转后把最低点贴回原放置面，避免悬空/下陷
+            Quaternion holdRot = Quaternion.Euler(config.HoldRotation);
+            if (Quaternion.Angle(item.rotation, holdRot) > 1f)
+            {
+                float bottomBefore = WorldBounds(go).min.y;
+                item.rotation = holdRot;
+                float bottomAfter = WorldBounds(go).min.y;
+                item.position += Vector3.up * (bottomBefore - bottomAfter);
+            }
 
             // 碰撞体：换成按网格包围盒生成的 BoxCollider（非凸 MeshCollider 无法配刚体）
             foreach (MeshCollider mc in go.GetComponents<MeshCollider>())

@@ -5021,6 +5021,22 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -2717719618051817479, guid: 65a8a8c2ce4602e47964aed807e4223e, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.50499946
+      objectReference: {fileID: 0}
+    - target: {fileID: -2717719618051817479, guid: 65a8a8c2ce4602e47964aed807e4223e, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0.82099986
+      objectReference: {fileID: 0}
+    - target: {fileID: -2717719618051817479, guid: 65a8a8c2ce4602e47964aed807e4223e, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.7071067
+      objectReference: {fileID: 0}
+    - target: {fileID: -2717719618051817479, guid: 65a8a8c2ce4602e47964aed807e4223e, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0.7071068
+      objectReference: {fileID: 0}
     - target: {fileID: -2512960502990666787, guid: 65a8a8c2ce4602e47964aed807e4223e, type: 3}
       propertyPath: m_Enabled
       value: 0
@@ -16777,8 +16793,11 @@ MonoBehaviour:
   followFactor: 0.85
   sinkPerDegree: 0.0015
   deadZone: 6
-  handGripOffset: 0.07
+  gripAlongDist: 0.06
+  gripNormalDist: -0.035
   carryGripOffset: 0.1
+  armTuckOffset: {x: 0, y: -0.2, z: -0.2}
+  armTuckRotation: {x: -12, y: 0, z: 0}
 --- !u!114 &1346572151
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -16796,6 +16815,8 @@ MonoBehaviour:
   carryForearm: {x: -28, y: 8, z: 0}
   pushForearm: {x: -26, y: 0, z: 0}
   pressForearm: {x: -40, y: 20, z: 0}
+  gripWristEuler: {x: -6, y: 12, z: 20}
+  carryWristEuler: {x: -10, y: 14, z: 18}
 --- !u!64 &1348160142
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -21473,31 +21494,31 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: a457dbf865c125e4b9b8fc15cd2ea181, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 6.383
+      value: 6.3829994
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a457dbf865c125e4b9b8fc15cd2ea181, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.726
+      value: 0.7140151
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a457dbf865c125e4b9b8fc15cd2ea181, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 1.256
+      value: 1.2560003
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a457dbf865c125e4b9b8fc15cd2ea181, type: 3}
       propertyPath: m_LocalRotation.w
-      value: -0.0030764968
+      value: 0.7071068
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a457dbf865c125e4b9b8fc15cd2ea181, type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0.027739255
+      value: -0.7071068
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a457dbf865c125e4b9b8fc15cd2ea181, type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0.73464143
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a457dbf865c125e4b9b8fc15cd2ea181, type: 3}
       propertyPath: m_LocalRotation.z
-      value: -0.6778813
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a457dbf865c125e4b9b8fc15cd2ea181, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -21609,7 +21630,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PickupItem
   carryMode: 0
   holdPositionOffset: {x: 0, y: 0, z: 0}
-  holdRotationOffset: {x: 0, y: 0, z: 0}
+  holdRotationOffset: {x: -90, y: 0, z: 0}
   dropForwardVelocity: 0.8
 --- !u!64 &2061495279
 MeshCollider:
