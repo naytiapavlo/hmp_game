@@ -25,6 +25,8 @@ namespace HMProtection.UI
         public Image loadingProgress;
         public TextMeshProUGUI loadingLabel;
         [SerializeField] private string officeScenePath = "Assets/Scenes/办公室场景.unity";
+        [Tooltip("选完场景后的起火 CG 转场（闪黑→CG→黑场渐出），留空则直接加载")]
+        [SerializeField] private CgTransitionPlayer cgTransition;
 
         private bool officeSelected;
         private bool loading;
@@ -88,6 +90,8 @@ namespace HMProtection.UI
         {
             loading = true;
             startButton.interactable = officeCard.interactable = backButton.interactable = closeButton.interactable = false;
+            // 起火 CG 转场：立刻闪黑盖住界面，CG 与场景加载并行
+            if (cgTransition != null && cgTransition.HasClip) cgTransition.BeginCgTransition();
             loadingOverlay.SetActive(true);
             loadingProgress.fillAmount = 0;
             loadingLabel.text = "Loading Office... 0%";
@@ -101,6 +105,7 @@ namespace HMProtection.UI
             if (operation == null)
             {
                 loading = false;
+                if (cgTransition != null && cgTransition.HasClip) cgTransition.CancelTransition(); // 黑场退回，别把用户困在黑屏里
                 loadingOverlay.SetActive(false);
                 officeCard.interactable = backButton.interactable = closeButton.interactable = true;
                 startButton.interactable = officeSelected;
@@ -120,6 +125,9 @@ namespace HMProtection.UI
             loadingProgress.fillAmount = 1;
             loadingLabel.text = "Loading Office... 100%";
             yield return null;
+            // 等 CG 播完（或被跳过）再进第一人称；场景在黑场后早已加载就绪，激活瞬间完成
+            if (cgTransition != null && cgTransition.HasClip)
+                while (!cgTransition.VideoDone) yield return null;
             operation.allowSceneActivation = true;
         }
     }

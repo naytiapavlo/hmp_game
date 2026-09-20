@@ -3,6 +3,7 @@
 // for exit first (components added during play do not persist).
 // Writes Library/AutoRotateSetup.json. A marker file prevents it from running
 // twice; use the menu item to force a re-run.
+// force editor asm rebuild
 using System;
 using System.Collections.Generic;
 using System.Globalization;
