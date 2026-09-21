@@ -1,0 +1,14 @@
+{
+  "levels": [
+    {
+      "id": "level_1_initial_fire",
+      "displayName": "初起火灾应对",
+      "sceneName": "办公室场景",
+      "configPath": "Configs/Levels/level_1_initial_fire",
+      "status": "available",
+      "unlockAfter": "",
+      "order": 1,
+      "transitionVideo": "起火"
+    }
+  ]
+}

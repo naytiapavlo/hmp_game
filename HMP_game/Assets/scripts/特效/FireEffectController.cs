@@ -42,6 +42,13 @@ public class FireEffectController : MonoBehaviour
     /// <summary>当前火势分级</summary>
     public FireLevel CurrentLevel { get; private set; } = FireLevel.None;
 
+    /// <summary>当前分级实例（可能为 null）；供关卡状态机下发 intensity/scale/smokeAmount 三个 0-1 参数。
+    /// 分级仍由 SetLevel 唯一决定（架构文档 §八：FireEffectController 只收「火势几级」），本属性只读。</summary>
+    public FireVfx CurrentVfx => currentInstance;
+
+    /// <summary>当前是否有正在显示的分级实例。</summary>
+    public bool HasFire => currentInstance != null;
+
     private FireVfx currentInstance;
     private bool frozen;
     private Renderer[] targetRenderers;
