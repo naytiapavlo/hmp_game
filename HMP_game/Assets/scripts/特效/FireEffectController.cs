@@ -49,9 +49,15 @@ public class FireEffectController : MonoBehaviour
     /// <summary>当前是否有正在显示的分级实例。</summary>
     public bool HasFire => currentInstance != null;
 
+    /// <summary>F9 调试热键是否归本组件所有（= debugMode）。
+    /// LevelFlowRunner 据此让出 F9：同一次按键若被两处各推进一档，会跳成 None→Small→Large，
+    /// 看起来像"随机切换"而不是循环。约定：火源自己开了 debugMode 就由它独占 F9。</summary>
+    public bool DebugKeyEnabled => debugMode;
+
     private FireVfx currentInstance;
     private bool frozen;
     private Renderer[] targetRenderers;
+    private float lastDebugCycleTime = float.NegativeInfinity;
 
     /// <summary>切换火势分级（实例化对应预制体替换当前实例）</summary>
     public void SetLevel(FireLevel level)
@@ -101,6 +107,10 @@ public class FireEffectController : MonoBehaviour
         if (!debugMode || !Application.isPlaying) return;
         Keyboard kb = Keyboard.current;
         if (kb == null || !kb.f9Key.wasPressedThisFrame) return;
+        // 节流：wasPressedThisFrame 是按「输入更新」判定的，编辑器里同一次按键可能被连续多帧观测到，
+        // 不节流会一次按键跳两档（None→Small、Small→Large…），看起来就像随机跳级而不是循环。
+        if (Time.unscaledTime - lastDebugCycleTime < 0.2f) return;
+        lastDebugCycleTime = Time.unscaledTime;
         FireLevel next = CurrentLevel switch
         {
             FireLevel.None => FireLevel.SmokeOnly,

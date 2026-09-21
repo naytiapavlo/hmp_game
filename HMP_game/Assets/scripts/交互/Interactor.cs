@@ -42,6 +42,17 @@ public class Interactor : MonoBehaviour
     /// <summary>双手物品吸附锚点</summary>
     public Transform CarryAnchor { get; private set; }
 
+    /// <summary>持物对齐用：视角相对「水平朝向」的旋转（纯俯仰，不含 yaw）。
+    /// 持物锚点的旋转只含 yaw（由 ArmsPitchFollow 每帧保证），所以在锚点下的持物节点上写"俯仰"，
+    /// 就得到「相对画面朝上」的持握姿态；而且这个值不含 yaw —— 快速转身时不会因为
+    /// 「父级 yaw 何时更新」与「何时写物品姿态」的先后差异而被多转一个 ΔYaw（那会表现为抖动）。</summary>
+    public Quaternion ViewPitchRotation =>
+        Quaternion.Euler(playerBody != null ? playerBody.Pitch : 0f, 0f, 0f);
+
+    /// <summary>眼睛相机变换（拿取诊断用：打印持物与相机的距离，便于排查"看不见/穿模"）。</summary>
+    public Transform ViewTransform => playerBody != null && playerBody.PlayerCamera != null
+        ? playerBody.PlayerCamera.transform : null;
+
     private body playerBody;
     private HandPoseController hands;
     private InteractionHUD hud;

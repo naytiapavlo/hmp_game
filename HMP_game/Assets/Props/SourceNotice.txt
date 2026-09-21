@@ -22,3 +22,41 @@ SM_Cup_01 水杯（交互道具）资产来源登记
 1. 补交正式交付贴图与 .blend 源文件（当前仓库 模型/办公室场景/ 只有 FBX）
 2. 在《资产来源登记》正式登记本资产
 3. 确认该 jug_01（陶瓷水罐）即项目所需「办公水杯」——若需马克杯样式需重新交付
+
+
+SM_Extinguisher_01 灭火器（双手可抓取道具）资产来源登记
+======================================================
+
+模型：SM_Extinguisher_01.fbx（源件 模型/办公室场景/SM_Extinguisher_01.fbx）
+- 交付方：项目负责人（2026-09-21 提供的下载件「灭火器3d模型 (2).fbx」）
+- 来源：AI 生成（Tripo）——判据：文件名/材质/UV 命名特征 tripo_part_0…10 与随附的 <名称>.fbm 外部贴图
+- 许可：项目负责人于 2026-09-21 确认**允许本项目商用**；
+  生成记录位置：待补（建议把 Tripo 生成页与当时服务条款链接补进本文件，满足《版权要求》§6）
+- 内容检查：贴图为通用消防标签（PROTECTION / FIRE EXTINGUISHER 图示），未见第三方品牌 Logo 或水印（§4）
+- 面数处理：原交付件 689,478 顶点 / **1,371,601 三角面**（11 部件）违反《建模规范》§4/§6；Tripo 侧无法导出低模，
+  故 2026-09-21 用项目自带 Blender 5.2 做**塌陷式 Decimate**：ratio 0.03281 → **44,987 三角面**（3.3%），
+  并在 Blender 内把「归一化包围盒（最大边 = 1.0）」烘成**真实尺寸 0.149 × 0.308 × 0.500 m**（底面 z=0，§2/§9）。
+  复现命令：`blender --background --factory-startup --disable-autoexec --python decimate_extinguisher.py -- <高模.fbx> <输出.fbx> 45000`
+  - 保留：11 个部件、11 个材质名（`Material_tripo_part_0…10`）、全部 UV 与贴图
+  - **导出踩坑（2026-09-21，已修）**：预览渲染用的相机/灯光**必须在导出前删除**，并限定
+    `object_types={'MESH'}`；否则它们会随 FBX 进 Unity——相机 depth 默认 0 > 玩家主相机 -1，渲染在后
+    会**清屏抢走整个画面**（表现为"Play 后相机被固定对着灭火器"），两盏太阳灯还会把材质**打成纯白**。
+    复核方式：重新导入交付件，物体类型分布必须只有网格（本次复核结果 `{'MESH': 11}`）
+  - 复核：重新导入导出件 = 44,987 三角面、尺寸一致、11 张图集全部加载通过、无相机/灯光
+  - 预览：`模型/办公室场景/灭火器低模预览.png`（Cycles 渲染，512²）
+  - **高模原件不入库**（留在下载目录），避免 28 MB 进 LFS 历史；需要时从 Tripo 重新下载
+
+贴图：Assets/Props/Textures/T_Extinguisher_01_PartNN_BaseColor.jpg（11 张）
+- 分辨率：Part00 = 2048²、Part01–06/08 = 512²、Part07 = 256²、Part09/10 = 128²
+- 只有 BaseColor，**缺 Normal / Roughness / Metallic / AO**（《建模规范》§5 的 PBR 五项）→ 待 Astra 补齐
+
+材质：Assets/Props/Materials/MAT_Extinguisher_01_PartNN.mat
+- 由 ExtinguisherSetup 自动生成（URP Lit）并按材质名重映射回模型；Metallic 0.15 / Smoothness 0.45 为标量近似
+- 尺寸：交付件是归一化包围盒（最大边 = 1.0），工具按实测高度把 globalScale 校正到真实 0.5m（§2），
+  原点为底部中心（§9）
+
+待办：
+1. 【Astra】补 Normal/Roughness/Metallic/AO，或按正式 UV 出 PBR 材质（当前只有 BaseColor）
+2. 【负责人】把 Tripo 生成记录/许可链接补进本登记
+3. 【负责人】复核贴图内是否含第三方品牌标识（§4）
+4. 如需更高精度（重点消防设备允许 1024–2048 贴图与更高面数），可替换同名源件后重跑部署菜单

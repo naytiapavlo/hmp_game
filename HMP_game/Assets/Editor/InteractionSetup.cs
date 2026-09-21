@@ -46,8 +46,20 @@ public static class InteractionSetup
     private static readonly PickupConfig[] PickupConfigs =
     {
         // HoldRotation：水杯模型的开口轴沿自身 +Z，持握/摆放时绕 X 转 -90° 让杯口朝上
-        new PickupConfig("SM_Cup_01", PickupItem.CarryMode.OneHand, true, "SM_NotebookPages_01", new Vector3(-90f, 0f, 0f)),
-        new PickupConfig("SM_Keyboard_01", PickupItem.CarryMode.TwoHands, false, null, Vector3.zero),
+        // AlignsToView：水杯关（世界直立）——它原点在底部、抓握点在掌心凹槽，跟视角俯仰会让
+        //               几何落进手部网格/近裁面里而看不见；长条物（灭火器等）才开
+        // HoldPosition：可选；null = 不动（由谁部署谁负责）。水杯给 +3cm 让杯身相对手部抬高一点，
+        //               减少杯底与手指/掌心的穿模
+        new PickupConfig("SM_Cup_01", PickupItem.CarryMode.OneHand, true, "SM_NotebookPages_01",
+                         new Vector3(-90f, 0f, 0f), false, new Vector3(0f, 0.03f, 0f)),
+        new PickupConfig("SM_Keyboard_01", PickupItem.CarryMode.TwoHands, false, null,
+                         Vector3.zero, true, null),
+        // 灭火器：由 Assets/Editor/ExtinguisherSetup.cs 部署（尺寸/材质/持握点都在那边），
+        // 这里只登记配置——关键作用是让 CleanupStalePickups 认得它，否则重跑本工具会把它的
+        // PickupItem/Rigidbody/BoxCollider 当"陈旧道具"剥掉。
+        // 持握点居中偏移（holdPositionOffset）由 ExtinguisherSetup 按包围盒写入 → 这里传 null 不覆盖。
+        new PickupConfig("SM_Extinguisher_01", PickupItem.CarryMode.TwoHands, false, null,
+                         Vector3.zero, true, null),
     };
 
     private class PickupConfig
@@ -55,15 +67,20 @@ public static class InteractionSetup
         public readonly string ObjectName;
         public readonly PickupItem.CarryMode Mode;
         public readonly bool EnsureInScene;
-        public readonly string PlaceNearName;  // 摆放参考物（放在它旁边）；null = 桌面中央
-        public readonly Vector3 HoldRotation;  // 持握与摆放时的旋转补偿（欧拉角）
-        public PickupConfig(string objectName, PickupItem.CarryMode mode, bool ensureInScene, string placeNearName, Vector3 holdRotation)
+        public readonly string PlaceNearName;      // 摆放参考物（放在它旁边）；null = 桌面中央
+        public readonly Vector3 HoldRotation;      // 持握与摆放时的旋转补偿（欧拉角）
+        public readonly bool AlignsToView;         // 持握朝向是否跟随摄像机视角（长条物 true / 水杯 false）
+        public readonly Vector3? HoldPosition;     // 持握位置偏移；null = 保持现值（不动）
+        public PickupConfig(string objectName, PickupItem.CarryMode mode, bool ensureInScene,
+                            string placeNearName, Vector3 holdRotation, bool alignsToView, Vector3? holdPosition)
         {
             ObjectName = objectName;
             Mode = mode;
             EnsureInScene = ensureInScene;
             PlaceNearName = placeNearName;
             HoldRotation = holdRotation;
+            AlignsToView = alignsToView;
+            HoldPosition = holdPosition;
         }
     }
 
@@ -478,6 +495,9 @@ public static class InteractionSetup
             var so = new SerializedObject(pickup);
             so.FindProperty("carryMode").enumValueIndex = (int)config.Mode;
             so.FindProperty("holdRotationOffset").vector3Value = config.HoldRotation;
+            so.FindProperty("holdAlignsToView").boolValue = config.AlignsToView;
+            if (config.HoldPosition.HasValue)
+                so.FindProperty("holdPositionOffset").vector3Value = config.HoldPosition.Value;
             so.ApplyModifiedPropertiesWithoutUndo();
 
             // 场景摆放旋转与持握一致（水杯立起来）；旋转后把最低点贴回原放置面，避免悬空/下陷

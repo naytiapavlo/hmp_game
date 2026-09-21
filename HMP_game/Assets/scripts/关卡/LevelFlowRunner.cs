@@ -618,7 +618,9 @@ namespace HMProtection.Core
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null) return;
             if (keyboard.f8Key.wasPressedThisFrame) SetPaused(!IsPaused);
-            if (keyboard.f9Key.wasPressedThisFrame) CycleFireLevel();
+            // F9 火势分级只能有一个拥有者：火源自己开着 debugMode 时（测试场景）由它独占，
+            // 否则同一次按键会被两个 Update 各推进一档（None→Small→Large…），看起来像随机跳级。
+            if (keyboard.f9Key.wasPressedThisFrame && (fire == null || !fire.DebugKeyEnabled)) CycleFireLevel();
             if (keyboard.f10Key.wasPressedThisFrame) SkipStage();
         }
 
