@@ -33,13 +33,39 @@ public class ArmsPitchFollow : MonoBehaviour
     [SerializeField] private float carryGripOffset = 0.10f;
 
     [Header("手臂收纳（减少占屏，Play 模式实时调）")]
-    [Tooltip("手臂根相对场景基准位置的偏移（支点局部空间，随俯仰一起转）：y 负=下沉，z 负=向后收（离镜头更远更小）。（实测调优值）")]
+    [Tooltip("手臂根相对场景基准位置的偏移（支点局部空间，随俯仰一起转）：y 负=下沉，z 正=向前推（离镜头更远）；z 负=靠近镜头。（实测调优值）")]
     [SerializeField] private Vector3 armTuckOffset = new Vector3(0f, -0.2f, -0.2f);
     [Tooltip("手臂根相对基准姿态的附加旋转（度）：x 负=手臂向下俯、从视野中央收走")]
     [SerializeField] private Vector3 armTuckRotation = new Vector3(-12f, 0f, 0f);
 
     /// <summary>均匀缩放旋转支点（Awake 时创建）；Interactor 的持物锚点挂这里</summary>
     public Transform Pivot { get; private set; }
+
+    /// <summary>视角俯仰（度）→ 去死区后的有效俯仰（度，**未乘** followFactor）。死区内为 0。</summary>
+    public float EffectivePitch(float viewPitch)
+    {
+        if (viewPitch > deadZone) return viewPitch - deadZone;
+        if (viewPitch < -deadZone) return viewPitch + deadZone;
+        return 0f;
+    }
+
+    /// <summary>视角俯仰（度）→ 支点实际俯仰（度，含死区与 followFactor）。
+    /// **两点持握**（右手持物 + 左手必须贴在物体另一处，如灭火器右拳握提把/左掌握喷头）时按一帧反算持物俯仰用这个，
+    /// 不要用 body.Pitch：死区内手臂根本不转，而按 body.Pitch 算的持物转了最多 5.1°（0.4m 力臂上≈3.5cm），
+    /// 那正是"两手相对位姿随俯仰变化 → 左手相对物体滑开"的根因。</summary>
+    public float AppliedPitch(float viewPitch) => EffectivePitch(viewPitch) * followFactor;
+
+    /// <summary>按「单手抓握」的掌面口径算出某只手的抓握点（right=true 右手）。
+    /// 与 TrackAnchorsToHands 里 Anchor_RHand 的定位公式同源，左右手同一套距离——
+    /// 灭火器的「喷头 ↔ 左手掌」偏差诊断要用同样口径才有意义。返回 false = 手部骨骼不可用。</summary>
+    public bool TryGetGripPoint(bool right, out Vector3 point)
+    {
+        point = Vector3.zero;
+        if (hands == null) return false;
+        if (!hands.TryGetPalmFrame(right, out Vector3 wrist, out Vector3 along, out Vector3 normal)) return false;
+        point = wrist + along * gripAlongDist + normal * gripNormalDist;
+        return true;
+    }
 
     private body playerBody;
     private Transform playerCameraT;
@@ -81,11 +107,8 @@ public class ArmsPitchFollow : MonoBehaviour
     {
         if (Pivot == null || playerBody == null) return;
 
-        // 死区外才跟随，减去死区宽度避免边界跳变
-        float pitch = playerBody.Pitch;
-        float effective = 0f;
-        if (pitch > deadZone) effective = pitch - deadZone;
-        else if (pitch < -deadZone) effective = pitch + deadZone;
+        // 死区外才跟随，减去死区宽度避免边界跳变（与 EffectivePitch 同一口径——持物对齐按它反算支点俯仰）
+        float effective = EffectivePitch(playerBody.Pitch);
 
         // yaw 完全跟随 body；俯仰按比例跟随。支点原点即眼睛位置，
         // 手臂绕眼睛整体旋转 → 屏幕位置在任意俯仰角下保持一致
@@ -101,6 +124,25 @@ public class ArmsPitchFollow : MonoBehaviour
         transform.localPosition = armsBaseLocalPos + armTuckOffset;
         transform.localRotation = armsBaseLocalRot * Quaternion.Euler(armTuckRotation);
 
+        TrackAnchorsToHands();
+    }
+
+    /// <summary>Use a camera-relative hand pose while aiming the extinguisher.
+    /// Reset from the authored baseline each frame; generic hand/prop follow stays unchanged.</summary>
+    public void PrepareExtinguisherPose(Camera camera)
+    {
+        if (Pivot == null || camera == null) return;
+        Pivot.SetPositionAndRotation(camera.transform.position, camera.transform.rotation);
+        transform.localPosition = armsBaseLocalPos + armTuckOffset;
+        transform.localRotation = armsBaseLocalRot * Quaternion.Euler(-55f, 0f, 0f);
+        TrackAnchorsToHands();
+    }
+
+    /// <summary>Late-frame camera clearance for the extinguisher. Translate the whole hand rig
+    /// and refresh anchors together; LateUpdate restores the authored baseline next frame.</summary>
+    public void ShiftHeldPose(Vector3 worldOffset)
+    {
+        transform.position += worldOffset;
         TrackAnchorsToHands();
     }
 

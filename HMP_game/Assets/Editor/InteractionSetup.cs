@@ -55,11 +55,14 @@ public static class InteractionSetup
         new PickupConfig("SM_Keyboard_01", PickupItem.CarryMode.TwoHands, false, null,
                          Vector3.zero, true, null),
         // 灭火器：由 Assets/Editor/ExtinguisherSetup.cs 部署（尺寸/材质/持握点都在那边），
-        // 这里只登记配置——关键作用是让 CleanupStalePickups 认得它，否则重跑本工具会把它的
+        // 这里只登记名字——关键作用是让 CleanupStalePickups 认得它，否则重跑本工具会把它的
         // PickupItem/Rigidbody/BoxCollider 当"陈旧道具"剥掉。
-        // 持握点居中偏移（holdPositionOffset）由 ExtinguisherSetup 按包围盒写入 → 这里传 null 不覆盖。
+        // ownsHoldPose=false：**持握字段一个都不写**。灭火器是 HandleAndNozzle 模式（右拳拎提把 +
+        // 左手握喷头），carryMode / 持握偏移 / 俯仰同幅全由 ExtinguisherSetup 独占写入；
+        // 这里若照旧写 TwoHands + holdRotationOffset=zero，就会把新持握模式打回去——
+        // 而两个 [InitializeOnLoad] 工具的执行顺序没有保证，"谁后跑谁生效"等于随机结果。
         new PickupConfig("SM_Extinguisher_01", PickupItem.CarryMode.TwoHands, false, null,
-                         Vector3.zero, true, null),
+                         Vector3.zero, true, null, ownsHoldPose: false),
     };
 
     private class PickupConfig
@@ -71,8 +74,10 @@ public static class InteractionSetup
         public readonly Vector3 HoldRotation;      // 持握与摆放时的旋转补偿（欧拉角）
         public readonly bool AlignsToView;         // 持握朝向是否跟随摄像机视角（长条物 true / 水杯 false）
         public readonly Vector3? HoldPosition;     // 持握位置偏移；null = 保持现值（不动）
+        public readonly bool OwnsHoldPose;         // 本表是否拥有该道具的持握字段（false = 只登记名字，别碰持握）
         public PickupConfig(string objectName, PickupItem.CarryMode mode, bool ensureInScene,
-                            string placeNearName, Vector3 holdRotation, bool alignsToView, Vector3? holdPosition)
+                            string placeNearName, Vector3 holdRotation, bool alignsToView, Vector3? holdPosition,
+                            bool ownsHoldPose = true)
         {
             ObjectName = objectName;
             Mode = mode;
@@ -81,6 +86,7 @@ public static class InteractionSetup
             HoldRotation = holdRotation;
             AlignsToView = alignsToView;
             HoldPosition = holdPosition;
+            OwnsHoldPose = ownsHoldPose;
         }
     }
 
@@ -489,20 +495,25 @@ public static class InteractionSetup
             }
             GameObject go = item.gameObject;
 
-            // PickupItem 组件与持握模式 + 持握旋转补偿
+            // PickupItem 组件与持握模式 + 持握旋转补偿。
+            // ownsHoldPose=false 的条目（灭火器）只保证组件在——持握字段由别的工具独占
+            // （见 PickupConfigs 里灭火器条目上的注释）。
             var pickup = go.GetComponent<PickupItem>();
             if (pickup == null) pickup = go.AddComponent<PickupItem>();
-            var so = new SerializedObject(pickup);
-            so.FindProperty("carryMode").enumValueIndex = (int)config.Mode;
-            so.FindProperty("holdRotationOffset").vector3Value = config.HoldRotation;
-            so.FindProperty("holdAlignsToView").boolValue = config.AlignsToView;
-            if (config.HoldPosition.HasValue)
-                so.FindProperty("holdPositionOffset").vector3Value = config.HoldPosition.Value;
-            so.ApplyModifiedPropertiesWithoutUndo();
+            if (config.OwnsHoldPose)
+            {
+                var so = new SerializedObject(pickup);
+                so.FindProperty("carryMode").enumValueIndex = (int)config.Mode;
+                so.FindProperty("holdRotationOffset").vector3Value = config.HoldRotation;
+                so.FindProperty("holdAlignsToView").boolValue = config.AlignsToView;
+                if (config.HoldPosition.HasValue)
+                    so.FindProperty("holdPositionOffset").vector3Value = config.HoldPosition.Value;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
 
             // 场景摆放旋转与持握一致（水杯立起来）；旋转后把最低点贴回原放置面，避免悬空/下陷
             Quaternion holdRot = Quaternion.Euler(config.HoldRotation);
-            if (Quaternion.Angle(item.rotation, holdRot) > 1f)
+            if (config.OwnsHoldPose && Quaternion.Angle(item.rotation, holdRot) > 1f)
             {
                 float bottomBefore = WorldBounds(go).min.y;
                 item.rotation = holdRot;

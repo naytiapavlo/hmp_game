@@ -7002,6 +7002,11 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -8304561251212237386, guid: 65a8a8c2ce4602e47964aed807e4223e, type: 3}
+--- !u!4 &777705402 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 7031960514254527988, guid: 665aeee81d0837b428a33e243c85a282, type: 3}
+  m_PrefabInstance: {fileID: 1156948185}
+  m_PrefabAsset: {fileID: 0}
 --- !u!64 &782047495
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -9001,7 +9006,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 665aeee81d0837b428a33e243c85a282, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.0000013411045
+      value: -0.00000013411045
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 665aeee81d0837b428a33e243c85a282, type: 3}
       propertyPath: m_LocalPosition.z
@@ -9056,6 +9061,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 665aeee81d0837b428a33e243c85a282, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1156948188}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 665aeee81d0837b428a33e243c85a282, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1156948191}
   m_SourcePrefab: {fileID: 100100000, guid: 665aeee81d0837b428a33e243c85a282, type: 3}
 --- !u!4 &1156948186 stripped
 Transform:
@@ -9079,10 +9087,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6d04c01ede68e154da4283e94db798ae, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PickupItem
-  carryMode: 1
-  holdPositionOffset: {x: 0, y: -0.24999854, z: 0.12}
+  carryMode: 2
+  interactPromptOverride: "E \u62FF\u8D77\u706D\u706B\u5668"
+  holdPositionOffset: {x: 0.0008993149, y: -0.43972558, z: 0.07173729}
   holdRotationOffset: {x: 0, y: 0, z: 0}
-  holdAlignsToView: 1
+  holdAlignsToView: 0
+  holdPitchSyncsArms: 0
+  holdPitchFactor: 1
   dropForwardVelocity: 0.8
 --- !u!54 &1156948189
 Rigidbody:
@@ -9130,8 +9141,31 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.14943981, y: 0.50000006, z: 0.3082075}
-  m_Center: {x: 0.00002861023, y: 0.24999854, z: 0.000017642975}
+  m_Size: {x: 0.14943981, y: 0.50000006, z: 0.30820847}
+  m_Center: {x: 0, y: 0.25000003, z: 0}
+--- !u!114 &1156948191
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1156948187}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e3bc7b5f20eb467eaa9c663c0704cd61, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ExtinguisherSpray
+  suppression: {fileID: 1461051587}
+  sprayVfxPrefab: {fileID: 185705013193658421, guid: 29f1d116447a657488bac3e0ea83fe7b, type: 3}
+  hoseNozzle: {fileID: 777705402}
+  nozzleLocalPosition: {x: 0, y: 0.4600001, z: 0.18951465}
+  range: 3
+  rootBandHeight: 0.35
+  rootBandRadius: 0.5
+  scatterDegrees: 6
+  pinPulled: 1
+  sprayAudio: {fileID: 0}
+  verboseLog: 1
 --- !u!64 &1162895696
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -9981,6 +10015,14 @@ MonoBehaviour:
   pressForearm: {x: -40, y: 20, z: 0}
   gripWristEuler: {x: -6, y: 12, z: 20}
   carryWristEuler: {x: -10, y: 14, z: 18}
+  extinguisherRightForearm: {x: -18, y: 0, z: 0}
+  extinguisherRightWrist: {x: -4, y: -8, z: -14}
+  extinguisherRightFingers: {x: -30, y: -45, z: -25}
+  extinguisherRightThumb: {x: -14, y: -16, z: -8}
+  extinguisherLeftForearm: {x: -18, y: 0, z: 0}
+  extinguisherLeftWrist: {x: -18, y: 18, z: -8}
+  extinguisherLeftFingers: {x: -24, y: -38, z: -20}
+  extinguisherLeftThumb: {x: -12, y: -14, z: -6}
 --- !u!64 &1352365671
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -10343,6 +10385,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1461051586}
   - component: {fileID: 1461051585}
+  - component: {fileID: 1461051587}
   m_Layer: 0
   m_Name: "\u8D77\u706B\u70B9"
   m_TagString: Untagged
@@ -10384,6 +10427,26 @@ Transform:
   - {fileID: 1205439069}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1461051587
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1461051584}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 52ab3d2721a9463a80cd2523aaa0d6ce, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FireSuppression
+  fire: {fileID: 0}
+  suppressSpeed: 1.1
+  recoverSpeed: 0.12
+  lowerAt: 0.2
+  smokeLowerAt: 0.15
+  reigniteAfter: 4
+  confirmSeconds: 5
+  verboseLog: 1
 --- !u!64 &1467663312
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -13044,9 +13107,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PickupItem
   carryMode: 0
+  interactPromptOverride:
   holdPositionOffset: {x: 0, y: 0.03, z: 0}
   holdRotationOffset: {x: -90, y: 0, z: 0}
   holdAlignsToView: 0
+  holdPitchSyncsArms: 0
+  holdPitchFactor: 1
   dropForwardVelocity: 0.8
 --- !u!64 &2061495279
 MeshCollider:

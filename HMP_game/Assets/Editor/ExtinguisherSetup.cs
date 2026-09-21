@@ -13,11 +13,23 @@
 //           使整体高度 = TargetHeightM；已接近目标则不动。每次重跑都会重新校正。
 //
 // 部署（仅第三场景）：挂在内容根「场景」下，落在 SM_Desk_02 旁的空地（离火源更远的一侧，
-//           让玩家必须走过去取），底部贴地面；接线 PickupItem(TwoHands) + BoxCollider + Rigidbody
+//           让玩家必须走过去取），底部贴地面；接线 PickupItem(HandleAndNozzle) + BoxCollider + Rigidbody
 //           + Interactable 层——与 InteractionSetup.SetupPickups 的做法一致。
 //
+// 持握字段的唯一归属（重要，防两个装配工具互相覆盖）：PickupItem 上的 carryMode /
+//   holdAlignsToView / holdPitchSyncsArms / holdPitchFactor / holdPositionOffset /
+//   holdRotationOffset / interactPromptOverride，以及 HandPoseController 上 Pose.Extinguisher 的
+//   8 组臂角/腕角/指节，**都只由本工具写**；ExtinguisherSpraySetup 只管喷射粒子资产与
+//   ExtinguisherSpray / FireSuppression 的接线，InteractionSetup 只登记灭火器名字，都不碰这些。
+//   （两个 [InitializeOnLoad] 工具的执行顺序没有保证，"谁后跑谁生效"会变成随机结果。）
+//   v2：carryMode = HandleAndNozzle（右拳拎提把、左手握喷头），俯仰改为与手臂支点严格同幅。
+//   v3：持握点改用**几何包围盒**求提把/压把中点（节点 transform 全在原点，按它反推会得到 (0,0,0)，
+//       瓶身"穿"在手腕上、手臂看不见了），并顺带刷新 Pose.Extinguisher 臂角（脚本默认值陷阱）。
+//   v4：臂角改为**离线实测值**（Blender 扫骨骼 + 掌面抓握点公式）：右手前臂 +15°、左手 +25°，
+//       两点间距正好等于模型刚性距离 0.398m、高度齐平、比 Carry 基线高 0.20m。
+//
 // 幂等：文件按需复制/覆盖；材质、碰撞体、组件缺失才创建；已存在同名实例则只刷新接线与位置。
-//       Library/ExtinguisherSetup.v1.done 防重复执行；菜单可强制重跑（换了模型文件后请重跑）。
+//       Library/ExtinguisherSetup.v4.done 防重复执行；菜单可强制重跑（换了模型文件后请重跑）。
 // 不写标记的情形：源 FBX 尚不存在（等低模交付）——此时不落标记，模型到位后自动补跑。
 using System;
 using System.Collections.Generic;
@@ -48,7 +60,33 @@ public static class ExtinguisherSetup
     /// <summary>目标高度（米）：5kg 手提干粉灭火器含提把/阀门约 0.5m——建模规范要求真实尺寸</summary>
     private const float TargetHeightM = 0.5f;
 
-    private const string Marker = "Library/ExtinguisherSetup.v1.done";
+    /// <summary>模型语义节点名（Astra 语义化命名的部件）：右手抓握的**两个红色手柄**取提把与压把，
+    /// 左手抓握取喷嘴本体（喇叭口）；喷射口空挂点 Nozzle 只作为喷射原点用。
+    /// 注意：这些部件的 transform 都在原点，几何烘在网格里——位置一律经 PropGeometry 按包围盒取。</summary>
+    private const string CarryHandleNodeName = "CarryHandle";
+    private const string SqueezeLeverNodeName = "SqueezeLever";
+    private const string NozzleBodyNodeName = "NozzleBody";
+    private const string NozzleNodeName = "Nozzle";
+
+    /// <summary>灭火器持握的**朝向**偏移初值（度）。位置不用人给：由 CarryHandle/SqueezeLever 几何中点反推。
+    /// 运行时由 ExtinguisherCarryRig 保持瓶身直立，喷嘴独立对齐左手。</summary>
+    private static readonly Vector3 HoldRotationOffset = Vector3.zero;
+
+    // ---- Pose.Extinguisher 的臂角/腕角/指节（度）。本工具独占写入 ----
+    // 为什么工具要写：这些是 HandPoseController 上的 [SerializeField]，组件已经进了场景，
+    //   **改脚本里的初始值对已存在的组件无效**（"脚本默认值陷阱"，项目已用 followFactor 先例验证过）。
+    //
+    // 左右手各自持握：瓶身由右手保持直立，喷嘴由左手控制；软管不再视为刚体。
+    private static readonly Vector3 ExtRightForearm = new Vector3(-18f, 0f, 0f);
+    private static readonly Vector3 ExtRightWrist = new Vector3(-4f, -8f, -14f);
+    private static readonly Vector3 ExtRightFingers = new Vector3(-30f, -45f, -25f);
+    private static readonly Vector3 ExtRightThumb = new Vector3(-14f, -16f, -8f);
+    private static readonly Vector3 ExtLeftForearm = new Vector3(-18f, 0f, 0f);
+    private static readonly Vector3 ExtLeftWrist = new Vector3(-18f, 18f, -8f);
+    private static readonly Vector3 ExtLeftFingers = new Vector3(-24f, -38f, -20f);
+    private static readonly Vector3 ExtLeftThumb = new Vector3(-12f, -14f, -6f);
+
+    private const string Marker = "Library/ExtinguisherSetup.v4.done";
     private const string ReportPath = "Library/ExtinguisherSetup.txt";
 
     private static int importAttempts;
@@ -187,7 +225,9 @@ public static class ExtinguisherSetup
         int texCopied = 0;
         if (Directory.Exists(srcTexDir))
         {
-            foreach (string jpg in Directory.GetFiles(srcTexDir, "*.jpg"))
+            foreach (string jpg in Directory.GetFiles(srcTexDir)
+                .Where(p => p.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)
+                         || p.EndsWith(".png", StringComparison.OrdinalIgnoreCase)))
             {
                 string dst = AssetTexFolder + "/" + Path.GetFileName(jpg);
                 if (NeedsCopy(jpg, dst)) { File.Copy(jpg, dst, true); texCopied++; }
@@ -227,10 +267,11 @@ public static class ExtinguisherSetup
         //      比玩家主相机的 -1 大 → 渲染在后、清屏覆盖，Play 后画面就被固定在这个相机上
         //      （第三场景曾因 FBX 里混进预览相机与两盏太阳灯而"相机被固定对着灭火器"）。
         var modelImporter = AssetImporter.GetAtPath(AssetFbxPath) as ModelImporter;
-        if (modelImporter != null && (modelImporter.importCameras || modelImporter.importLights))
+        if (modelImporter != null && (modelImporter.importCameras || modelImporter.importLights || !modelImporter.isReadable))
         {
             modelImporter.importCameras = false;
             modelImporter.importLights = false;
+            modelImporter.isReadable = true; // Runtime hose deformation uses a private mesh copy.
             modelImporter.SaveAndReimport();
             log.Add("导入设置：importCameras/importLights -> false（防模型自带相机盖住玩家相机）");
         }
@@ -375,9 +416,7 @@ public static class ExtinguisherSetup
             }
             mat.shader = shader;
             if (tex != null) mat.SetTexture("_BaseMap", tex);
-            // 交付件只有 BaseColor：金属/粗糙用保守标量近似（喷漆钢瓶），待 Astra 补 PBR 贴图后替换
-            mat.SetFloat("_Metallic", 0.15f);
-            mat.SetFloat("_Smoothness", 0.45f);
+            ApplyPbrMaps(mat, suffix, log);
             EditorUtility.SetDirty(mat);
 
             string matGuid = AssetDatabase.AssetPathToGUID(matPath);
@@ -403,8 +442,34 @@ public static class ExtinguisherSetup
             log.Add("材质重映射：" + pending.Count + " 条（本轮新增 " + added + "，其余 .meta 已有）");
         }
         AssetDatabase.SaveAssets();
-        log.Add("提示：交付件只提供 BaseColor（无 Normal/Roughness/Metallic/AO）——建模规范 §5 的 PBR 五项待 Astra 补齐");
+        log.Add("PBR：Normal + AO + MetallicSmoothness（R=Metallic，A=1-Roughness），原始 Roughness/Metallic 单独保留");
         return true;
+    }
+
+    private static void ApplyPbrMaps(Material mat, string suffix, List<string> log)
+    {
+        string prefix = AssetTexFolder + "/T_Extinguisher_01_" + suffix;
+        Texture2D normal = LoadTexture(prefix + "_Normal.png", out _);
+        Texture2D packed = LoadTexture(prefix + "_MetallicSmoothness.png", out _);
+        Texture2D ao = LoadTexture(prefix + "_AO.png", out _);
+        mat.SetTexture("_BumpMap", normal);
+        mat.SetTexture("_MetallicGlossMap", packed);
+        mat.SetTexture("_OcclusionMap", ao);
+        SetKeyword(mat, "_NORMALMAP", normal != null);
+        SetKeyword(mat, "_METALLICSPECGLOSSMAP", packed != null);
+        SetKeyword(mat, "_OCCLUSIONMAP", ao != null);
+        mat.DisableKeyword("_SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A");
+        mat.SetFloat("_SmoothnessTextureChannel", 0f);
+        mat.SetFloat("_Metallic", packed != null ? 1f : 0.15f);
+        mat.SetFloat("_Smoothness", packed != null ? 1f : 0.45f);
+        mat.SetFloat("_BumpScale", 1f);
+        mat.SetFloat("_OcclusionStrength", 0.8f);
+        log.Add(suffix + " PBR: normal=" + (normal != null) + " packed=" + (packed != null) + " ao=" + (ao != null));
+    }
+
+    private static void SetKeyword(Material mat, string keyword, bool enabled)
+    {
+        if (enabled) mat.EnableKeyword(keyword); else mat.DisableKeyword(keyword);
     }
 
     /// <summary>推断源材质名：先按编号匹配模型内嵌材质名，取不到再退回 Tripo 命名约定</summary>
@@ -514,17 +579,49 @@ public static class ExtinguisherSetup
             var pickup = go.GetComponent<PickupItem>();
             if (pickup == null) pickup = go.AddComponent<PickupItem>();
             var so = new SerializedObject(pickup);
-            so.FindProperty("carryMode").enumValueIndex = (int)PickupItem.CarryMode.TwoHands;
-            so.FindProperty("holdRotationOffset").vector3Value = Vector3.zero;
-            // 持握点：模型原点在底部中心，直接用手部锚点会让 0.5m 的瓶身从手上向上顶到脸前
-            // （近距离裁面 0.3m 会被"穿模看进内部"）。把持握点移到物品**几何中心**（= 包围盒中心），
-            // 并沿身前推 0.12m——用 center.y 而不是 size.y/2，换模型（原点不在底部）也自动成立。
-            Vector3 holdOffset = new Vector3(0f, -local.center.y, 0.12f);
+
+            // 持握点：原点是底部中心，直接用手部锚点会让 0.5m 的瓶身从手上向上顶到脸前。
+            // v1 用"包围盒中心 + 前推 0.12m"是权宜；v2 改成**扶手式持握**（右手握提把/压把、左手握喷头），
+            // 抓握点必须落在**两个红色手柄的几何中点**上。
+            // 关键：必须用**几何包围盒**求部件位置，不能用节点 transform ——
+            // 本模型的部件节点 transform 全在 (0,0,0)、几何偏移烘在网格里，
+            // 按 transform 反推会得到 holdPositionOffset=(0,0,0)，瓶身被"穿"在手腕上、整瓶向上盖住脸，
+            // 表现为"拿起灭火器后手臂直接不见了"（2026-09-22 实测踩过）。
+            Vector3 gripLocal;
+            string gripHow;
+            TryResolveGripLocal(go.transform, local, out gripLocal, out gripHow);
+            Vector3 holdOffset = -(Quaternion.Euler(HoldRotationOffset)
+                                   * Vector3.Scale(gripLocal, go.transform.lossyScale));
+
+            so.FindProperty("carryMode").enumValueIndex = (int)PickupItem.CarryMode.HandleAndNozzle;
+            so.FindProperty("holdAlignsToView").boolValue = false;
+            // 两点持握（右拳提把 + 左掌喷头）必须与手臂支点严格同幅俯仰，否则左手会随俯仰滑开
+            so.FindProperty("holdPitchSyncsArms").boolValue = false;
+            so.FindProperty("holdPitchFactor").floatValue = 1f;   // 同幅模式忽略此值，写 1 免得留下误导性数字
             so.FindProperty("holdPositionOffset").vector3Value = holdOffset;
-            so.FindProperty("holdAlignsToView").boolValue = true;
+            so.FindProperty("holdRotationOffset").vector3Value = HoldRotationOffset;
+            so.FindProperty("interactPromptOverride").stringValue = "E 拿起灭火器";
             so.ApplyModifiedPropertiesWithoutUndo();
-            log.Add("PickupItem：carryMode=TwoHands，holdAlignsToView=true（相对视角朝上），holdPositionOffset="
-                    + holdOffset.ToString("F3"));
+
+            // 原始收纳姿态的部件间距，仅用于资产诊断：左臂能不能够到喷头就看它。
+            // 与手部「右抓握点→左抓握点」的距离比，差得多说明要改 Pose.Extinguisher 的臂角，而不是掰持握偏移。
+            string jointGap = "?";
+            if (PropGeometry.TryGetPartCenterLocal(go.transform, NozzleBodyNodeName, out Vector3 nozzleLocal, out _)
+                || PropGeometry.TryGetPartCenterLocal(go.transform, NozzleNodeName, out nozzleLocal, out _))
+                jointGap = Vector3.Distance(Vector3.Scale(gripLocal, go.transform.lossyScale),
+                                            Vector3.Scale(nozzleLocal, go.transform.lossyScale)).ToString("F3") + " m";
+
+            log.Add("PickupItem：carryMode=HandleAndNozzle（右拳拎提把 + 左手握喷头）"
+                    + "　holdAlignsToView=false（瓶身直立；喷嘴独立随左手）");
+            log.Add("  持握点由几何包围盒反推：" + gripHow + " → 局部 " + gripLocal.ToString("F3")
+                    + "　holdPositionOffset=" + holdOffset.ToString("F3")
+                    + "　holdRotationOffset=" + HoldRotationOffset.ToString("F0"));
+            log.Add("  右手抓握点→左手抓握点 " + jointGap
+                    + "（收纳状态；运行时软管会弯曲，不能据此横转整瓶）");
+
+            // Pose.Extinguisher 的臂角也由本工具写入：这些是 HandPoseController 的 [SerializeField]，
+            // 组件已入场景，改代码初始值对它无效（脚本默认值陷阱）。
+            ApplyExtinguisherPose(scene, log);
 
             int layer = LayerMask.NameToLayer(InteractableLayerName);
             if (layer < 0)
@@ -539,6 +636,86 @@ public static class ExtinguisherSetup
         {
             if (openedByUs) EditorSceneManager.CloseScene(scene, true);
         }
+    }
+
+    /// <summary>把 Pose.Extinguisher 的 8 组角度写进场景里的 HandPoseController。
+    /// 必须由工具写而不是靠脚本初始值：组件已经进了场景，Unity 只认序列化值（脚本默认值陷阱）。</summary>
+    private static void ApplyExtinguisherPose(UnityEngine.SceneManagement.Scene scene, List<string> log)
+    {
+        HandPoseController hands = null;
+        foreach (GameObject root in scene.GetRootGameObjects())
+        {
+            hands = root.GetComponentInChildren<HandPoseController>(true);
+            if (hands != null) break;
+        }
+        if (hands == null)
+        {
+            log.Add("  ⚠ 场景里找不到 HandPoseController（手部姿态组件），Pose.Extinguisher 臂角未刷新");
+            return;
+        }
+
+        var so = new SerializedObject(hands);
+        SetPoseField(so, "extinguisherRightForearm", ExtRightForearm);
+        SetPoseField(so, "extinguisherRightWrist", ExtRightWrist);
+        SetPoseField(so, "extinguisherRightFingers", ExtRightFingers);
+        SetPoseField(so, "extinguisherRightThumb", ExtRightThumb);
+        SetPoseField(so, "extinguisherLeftForearm", ExtLeftForearm);
+        SetPoseField(so, "extinguisherLeftWrist", ExtLeftWrist);
+        SetPoseField(so, "extinguisherLeftFingers", ExtLeftFingers);
+        SetPoseField(so, "extinguisherLeftThumb", ExtLeftThumb);
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        log.Add("  Pose.Extinguisher 臂角已刷新：右前臂 " + ExtRightForearm.ToString("F0")
+                + "、左前臂 " + ExtLeftForearm.ToString("F0") + "（其余 6 项腕/指节一并写入）");
+    }
+
+    private static void SetPoseField(SerializedObject so, string name, Vector3 value)
+    {
+        SerializedProperty p = so.FindProperty(name);
+        if (p == null)
+        {
+            Debug.LogWarning("[灭火器] HandPoseController 上没有字段 " + name + "（改名了？）");
+            return;
+        }
+        p.vector3Value = value;
+    }
+
+    /// <summary>解析「右手抓握点」在物品局部空间里的位置（几何口径，见 PropGeometry 的说明）。
+    /// 优先级：提把与压把的几何中点（对应用户要求"右手握住 2 个红色手柄"）→ 提把几何中心 → 包围盒中心兜底。
+    /// 防呆：抓握点不可能贴在瓶底——算出的 y 若落在包围盒下 1/4 内（退化节点给出的 0 就是这种），
+    /// 一律判为不可信并走兜底，绝不写进场景（2026-09-22 实测踩过 holdPositionOffset=(0,0,0)）。</summary>
+    private static bool TryResolveGripLocal(Transform root, Bounds propLocal, out Vector3 gripLocal, out string how)
+    {
+        Vector3? handle = PartCenter(root, CarryHandleNodeName);
+        Vector3? lever = PartCenter(root, SqueezeLeverNodeName);
+        Vector3? candidate = null;
+        if (handle.HasValue && lever.HasValue)
+        {
+            candidate = (handle.Value + lever.Value) * 0.5f;
+            how = "提把与压把几何中点";
+        }
+        else if (handle.HasValue)
+        {
+            candidate = handle.Value;
+            how = "提把几何中心（未找到 " + SqueezeLeverNodeName + "）";
+        }
+        else how = "未找到 " + CarryHandleNodeName + " 语义部件";
+
+        if (candidate.HasValue && candidate.Value.y - propLocal.min.y > propLocal.size.y * 0.25f)
+        {
+            gripLocal = candidate.Value;
+            return true;
+        }
+
+        gripLocal = new Vector3(0f, propLocal.center.y, 0f);
+        how += " → 不可信（落在瓶底附近），改用包围盒中心兜底";
+        return false;
+    }
+
+    /// <summary>部件几何中心（物品局部空间）；找不到返回 null。</summary>
+    private static Vector3? PartCenter(Transform root, string name)
+    {
+        return PropGeometry.TryGetPartCenterLocal(root, name, out Vector3 c, out _) ? c : (Vector3?)null;
     }
 
     /// <summary>在 SM_Desk_02 四周挑空位；多个空位时取离火源更远的那个（玩家得走过去拿）</summary>
@@ -587,32 +764,11 @@ public static class ExtinguisherSetup
         return best;
     }
 
-    /// <summary>把整棵子树的渲染包围盒折算到根物体的局部空间（子物体有旋转/缩放也正确）</summary>
+    /// <summary>把整棵子树的渲染包围盒折算到根物体的局部空间（子物体有旋转/缩放也正确）。
+    /// 实现在 PropGeometry 里（运行时也会用同一套换算，见那儿的说明）。</summary>
     private static Bounds AggregateLocalBounds(GameObject root)
     {
-        var rends = root.GetComponentsInChildren<Renderer>(true);
-        if (rends.Length == 0) return new Bounds(Vector3.zero, Vector3.one * 0.1f);
-        Bounds world = rends[0].bounds;
-        for (int i = 1; i < rends.Length; i++) world.Encapsulate(rends[i].bounds);
-
-        Transform t = root.transform;
-        Vector3 c = world.center, e = world.extents;
-        var pts = new Vector3[8];
-        int n = 0;
-        for (int sx = -1; sx <= 1; sx += 2)
-            for (int sy = -1; sy <= 1; sy += 2)
-                for (int sz = -1; sz <= 1; sz += 2)
-                    pts[n++] = new Vector3(c.x + e.x * sx, c.y + e.y * sy, c.z + e.z * sz);
-
-        Vector3 min = t.InverseTransformPoint(pts[0]);
-        Vector3 max = min;
-        for (int i = 1; i < 8; i++)
-        {
-            Vector3 p = t.InverseTransformPoint(pts[i]);
-            min = Vector3.Min(min, p);
-            max = Vector3.Max(max, p);
-        }
-        return new Bounds((min + max) * 0.5f, max - min);
+        return PropGeometry.LocalBoundsOf(root.GetComponentsInChildren<Renderer>(true), root.transform);
     }
 
     // ==== 工具 ====
@@ -657,8 +813,14 @@ public static class ExtinguisherSetup
         var ti = AssetImporter.GetAtPath(assetPath) as TextureImporter;
         if (ti == null) return;
         bool dirty = false;
-        if (ti.textureType != TextureImporterType.Default) { ti.textureType = TextureImporterType.Default; dirty = true; }
-        if (!ti.sRGBTexture) { ti.sRGBTexture = true; dirty = true; }
+        bool isNormal = assetPath.EndsWith("_Normal.png", StringComparison.OrdinalIgnoreCase);
+        bool isColor = assetPath.Contains("_BaseColor");
+        var type = isNormal ? TextureImporterType.NormalMap : TextureImporterType.Default;
+        if (ti.textureType != type) { ti.textureType = type; dirty = true; }
+        if (ti.sRGBTexture != isColor) { ti.sRGBTexture = isColor; dirty = true; }
+        if (isNormal && ti.convertToNormalmap) { ti.convertToNormalmap = false; dirty = true; }
+        if (ti.alphaSource != TextureImporterAlphaSource.FromInput) { ti.alphaSource = TextureImporterAlphaSource.FromInput; dirty = true; }
+        if (ti.alphaIsTransparency) { ti.alphaIsTransparency = false; dirty = true; }
         if (ti.maxTextureSize != 2048) { ti.maxTextureSize = 2048; dirty = true; }
         if (ti.wrapMode != TextureWrapMode.Clamp) { ti.wrapMode = TextureWrapMode.Clamp; dirty = true; }
         if (!ti.mipmapEnabled) { ti.mipmapEnabled = true; dirty = true; }

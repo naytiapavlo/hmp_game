@@ -5,6 +5,8 @@
 //   - Pose.Carry 双手托举：双臂抬向胸前 + 十指半收 + 双腕内旋（抱键盘/灭火器）
 //   - Pose.Push 推门手势：右臂前伸 + 手掌张开 + 腕部前顶（开关门）
 //   - Pose.Press 扶椅手势：双臂向下向外张开、手落向扶手方向 + 四指半收（坐下/起身扶椅子）
+//   - Pose.Extinguisher 灭火器持握：**左右不对称**——右手握提把/压把双柄、左手前伸握软管喷头，
+//     各侧独立的姿态表（不镜像），配 PickupItem.CarryMode.HandleAndNozzle 使用
 //   - Pose.None 放松还原
 // 指节角度参考 模型/第一人称双手/Scripts/validate_export.py 的抓握校验姿势。
 //
@@ -26,7 +28,7 @@ using UnityEngine;
 public class HandPoseController : MonoBehaviour
 {
     public enum Hand { Left, Right, Both }
-    public enum Pose { None, Grip, Carry, Push, Press }
+    public enum Pose { None, Grip, Carry, Push, Press, Extinguisher }
 
     [Tooltip("右手骨骼是否用相反的卷曲符号（手指往外翘/腕部方向反了就勾选它）")]
     [SerializeField] private bool mirrorRightHand = false;
@@ -63,6 +65,28 @@ public class HandPoseController : MonoBehaviour
     [SerializeField] private Vector3 gripWristEuler = new Vector3(-6f, 12f, 20f);
     [Tooltip("托举腕部欧拉（双手抱物，掌心相向）")]
     [SerializeField] private Vector3 carryWristEuler = new Vector3(-10f, 14f, 18f);
+
+    // 注意：下面 8 组数值的**实际生效值由 Assets/Editor/ExtinguisherSetup.cs 写入场景**
+    //（组件已入场景，改这里的初始值对已存在的组件无效——脚本默认值陷阱）。
+    // 要改灭火器持握姿态，改 ExtinguisherSetup 里的 ExtRight*/ExtLeft* 常量；这里保持与其一致，
+    // 只在新场景/新组件第一次添加时起作用。
+    [Header("灭火器持握（Pose.Extinguisher——左右手完全不对称，Play 模式实时调）")]
+    [Tooltip("右手（握提把+压把双柄）前臂：x=抬臂俯仰（**越负手臂越低**；灵敏度 ~0.004m/°，全行程高度只差 0.36m）。降低前臂以减少占屏，运行时另做摄像机安全距离校正")]
+    [SerializeField] private Vector3 extinguisherRightForearm = new Vector3(-18f, 0f, 0f);
+    [Tooltip("右手腕部（掌心朝内握横梁，拇指搭压把）")]
+    [SerializeField] private Vector3 extinguisherRightWrist = new Vector3(-4f, -8f, -14f);
+    [Tooltip("右手四指卷握横梁（第1/2/3节）")]
+    [SerializeField] private Vector3 extinguisherRightFingers = new Vector3(-30f, -45f, -25f);
+    [Tooltip("右手拇指（搭在压把上，较松）")]
+    [SerializeField] private Vector3 extinguisherRightThumb = new Vector3(-14f, -16f, -8f);
+    [Tooltip("左手（握软管喇叭口）前臂：因两侧掌心偏移方向不同，同一角度下左手比右手低约 5cm，故 x 要比右手大 ~10° 才齐平")]
+    [SerializeField] private Vector3 extinguisherLeftForearm = new Vector3(-18f, 0f, 0f);
+    [Tooltip("左手腕部（握喇叭口，掌心朝前）")]
+    [SerializeField] private Vector3 extinguisherLeftWrist = new Vector3(-18f, 18f, -8f);
+    [Tooltip("左手四指卷握喇叭口（第1/2/3节）")]
+    [SerializeField] private Vector3 extinguisherLeftFingers = new Vector3(-24f, -38f, -20f);
+    [Tooltip("左手拇指")]
+    [SerializeField] private Vector3 extinguisherLeftThumb = new Vector3(-12f, -14f, -6f);
 
     // 每手：5指×3节 + 腕 + 前臂，双手共 34
     private const int ExpectedBoneCount = 34;
@@ -166,6 +190,9 @@ public class HandPoseController : MonoBehaviour
     {
         if (pose == Pose.None) return Quaternion.identity;
 
+        // 灭火器持握：左右手完全不对称（右=握双柄、左=握喷头），各用各的表，不做镜像
+        if (pose == Pose.Extinguisher) return OffsetExtinguisher(boneName, isRight);
+
         // 前臂骨：整只手臂的摆动（绕肘部），让手势有真实的“手臂动作”
         if (boneName.StartsWith("Forearm"))
         {
@@ -201,6 +228,27 @@ public class HandPoseController : MonoBehaviour
         float[] table = isThumb ? thumbTable : fingerTable;
         float sign = isRight && mirrorRightHand ? -1f : 1f;
         return Quaternion.Euler(sign * table[JointIndex(boneName) - 1], 0f, 0f);
+    }
+
+    // 灭火器持握的按侧取值（表是 Vector3 = 第1/2/3节）
+    private Quaternion OffsetExtinguisher(string boneName, bool isRight)
+    {
+        if (boneName.StartsWith("Forearm"))
+            return Quaternion.Euler(isRight ? extinguisherRightForearm : extinguisherLeftForearm);
+        if (boneName.StartsWith("Wrist"))
+        {
+            Vector3 w = isRight ? extinguisherRightWrist : extinguisherLeftWrist;
+            if (isRight && mirrorRightHand) w = new Vector3(w.x, -w.y, -w.z);
+            return Quaternion.Euler(w);
+        }
+        bool isThumb = boneName.StartsWith("Thumb");
+        Vector3 v = isThumb
+            ? (isRight ? extinguisherRightThumb : extinguisherLeftThumb)
+            : (isRight ? extinguisherRightFingers : extinguisherLeftFingers);
+        float sign = isRight && mirrorRightHand ? -1f : 1f;
+        int joint = JointIndex(boneName);
+        float angle = joint == 1 ? v.x : joint == 2 ? v.y : v.z;
+        return Quaternion.Euler(sign * angle, 0f, 0f);
     }
 
     // "Index.02.L" → 2（第几节指骨）
@@ -338,6 +386,27 @@ public class HandPoseController : MonoBehaviour
     {
         if (defaultRots.Count == 0) CaptureBones();
         SetPose(Hand.Both, Pose.Press);
+    }
+
+    [ContextMenu("测试：灭火器右手（握双柄）")]
+    private void TestExtinguisherRight()
+    {
+        if (defaultRots.Count == 0) CaptureBones();
+        SetPose(Hand.Right, Pose.Extinguisher);
+    }
+
+    [ContextMenu("测试：灭火器左手（握喷头）")]
+    private void TestExtinguisherLeft()
+    {
+        if (defaultRots.Count == 0) CaptureBones();
+        SetPose(Hand.Left, Pose.Extinguisher);
+    }
+
+    [ContextMenu("测试：灭火器持握（双手）")]
+    private void TestExtinguisherBoth()
+    {
+        if (defaultRots.Count == 0) CaptureBones();
+        SetPose(Hand.Both, Pose.Extinguisher);
     }
 
     // 从 FBX 源资产读回全部骨骼的原始旋转：彻底复位（只动旋转，保留位置调整），
