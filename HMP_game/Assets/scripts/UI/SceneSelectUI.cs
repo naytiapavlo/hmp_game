@@ -88,6 +88,7 @@ namespace HMProtection.UI
 
         private IEnumerator LoadOffice()
         {
+            HMProtection.Quiz.OfficeFireChoiceFlow.RequestOnNextOfficeLoad();
             loading = true;
             startButton.interactable = officeCard.interactable = backButton.interactable = closeButton.interactable = false;
             // 起火 CG 转场：立刻闪黑盖住界面，CG 与场景加载并行
@@ -104,6 +105,7 @@ namespace HMProtection.UI
             catch (Exception exception) { error = exception.Message; }
             if (operation == null)
             {
+                HMProtection.Quiz.OfficeFireChoiceFlow.CancelPendingEntry();
                 loading = false;
                 if (cgTransition != null && cgTransition.HasClip) cgTransition.CancelTransition(); // 黑场退回，别把用户困在黑屏里
                 loadingOverlay.SetActive(false);
