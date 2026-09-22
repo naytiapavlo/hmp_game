@@ -12,6 +12,9 @@ public class InteractionHUD : MonoBehaviour
 
     private Image crosshair;
     private Text promptLabel;
+    private string basePrompt;          // SetPrompt 写入的基础提示（Interactor 每帧更新）
+    private string promptOverride;      // 覆盖通道（喷射反馈等）：非空时优先显示
+    private bool crosshairTinted;       // 准星被第三态着色（喷射有效命中）：SetFocus 让位
 
     // 场景里没有 HUD 时创建一个（已存在则复用）
     public static InteractionHUD EnsureExists()
@@ -28,6 +31,7 @@ public class InteractionHUD : MonoBehaviour
     // 准星是否高亮（对准可交互物）
     public void SetFocus(bool focused)
     {
+        if (crosshairTinted) return;   // 喷射着色期间准星归喷射反馈独占，结束时自动还原
         if (crosshair != null)
         {
             crosshair.color = focused ? FocusColor : IdleColor;
@@ -35,13 +39,48 @@ public class InteractionHUD : MonoBehaviour
         }
     }
 
+    /// <summary>准星第三态（喷射有效命中等着色）：color 为 null 时还原，
+    /// 还原后由 Interactor 下一帧 SetFocus 校正回「平时/对准」两态。</summary>
+    public void SetCrosshairTint(Color? color, float scale)
+    {
+        if (crosshair == null) return;
+        if (color.HasValue)
+        {
+            crosshairTinted = true;
+            crosshair.color = color.Value;
+            crosshair.rectTransform.localScale = Vector3.one * Mathf.Max(0.01f, scale);
+        }
+        else if (crosshairTinted)
+        {
+            crosshairTinted = false;
+            crosshair.color = IdleColor;
+            crosshair.rectTransform.localScale = Vector3.one;
+        }
+    }
+
     // 底部提示文案；null/空 = 隐藏
     public void SetPrompt(string text)
     {
         if (promptLabel == null) return;
-        bool show = !string.IsNullOrEmpty(text);
+        basePrompt = text;
+        RefreshPrompt();
+    }
+
+    /// <summary>提示覆盖通道（喷射反馈等）：非空时显示它而不是基础提示。
+    /// 与 Interactor 每帧写 SetPrompt 不冲突——基础提示始终保留，只被盖住。</summary>
+    public void SetPromptOverride(string text)
+    {
+        if (promptLabel == null || promptOverride == text) return;
+        promptOverride = text;
+        RefreshPrompt();
+    }
+
+    private void RefreshPrompt()
+    {
+        string shown = string.IsNullOrEmpty(promptOverride) ? basePrompt : promptOverride;
+        bool show = !string.IsNullOrEmpty(shown);
         promptLabel.gameObject.SetActive(show);
-        if (show) promptLabel.text = text;
+        if (show) promptLabel.text = shown;
     }
 
     private void Build()

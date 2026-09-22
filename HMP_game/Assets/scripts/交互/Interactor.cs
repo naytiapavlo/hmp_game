@@ -42,8 +42,42 @@ public class Interactor : MonoBehaviour
     /// <summary>双手物品吸附锚点</summary>
     public Transform CarryAnchor { get; private set; }
 
+    /// <summary>持物对齐用：视角相对「水平朝向」的旋转（纯俯仰，不含 yaw）。
+    /// 持物锚点的旋转只含 yaw（由 ArmsPitchFollow 每帧保证），所以在锚点下的持物节点上写"俯仰"，
+    /// 就得到「相对画面朝上」的持握姿态；而且这个值不含 yaw —— 快速转身时不会因为
+    /// 「父级 yaw 何时更新」与「何时写物品姿态」的先后差异而被多转一个 ΔYaw（那会表现为抖动）。</summary>
+    public Quaternion ViewPitchRotation => Quaternion.Euler(ViewPitchDegrees, 0f, 0f);
+
+    /// <summary>视角俯仰角（度，抬头为正）。取原始度数而不是从四元数读 eulerAngles——
+    /// eulerAngles 会把负俯仰表示成 350°，再乘跟随系数就完全是另一个角度。</summary>
+    public float ViewPitchDegrees => playerBody != null ? playerBody.Pitch : 0f;
+
+    /// <summary>持物俯仰 = 视角俯仰 × 系数（度）。</summary>
+    public Quaternion CarryPitchRotation(float pitchFactor) =>
+        Quaternion.Euler(ViewPitchDegrees * pitchFactor, 0f, 0f);
+
+    /// <summary>手臂支点**实际**俯仰帧（与 ArmsPitchFollow 每帧施加在支点上的角度严格一致，含死区与 followFactor）。
+    /// 供两点持握的物体用：只有物体与手臂同幅俯仰，两只手相对物体的位姿才是常量，
+    /// 左手（或任何第二接触点）才不会随俯仰滑开。见 ArmsPitchFollow.AppliedPitch 的说明。</summary>
+    public Quaternion ArmPitchRotation
+    {
+        get
+        {
+            if (arms == null) arms = FindFirstObjectByType<ArmsPitchFollow>();
+            return Quaternion.Euler(arms != null ? arms.AppliedPitch(ViewPitchDegrees) : ViewPitchDegrees, 0f, 0f);
+        }
+    }
+
+    /// <summary>手部姿态控制器（灭火器的持握对齐诊断要用它取左右手掌坐标系）。</summary>
+    public HandPoseController Hands => hands;
+
+    /// <summary>眼睛相机变换（拿取诊断用：打印持物与相机的距离，便于排查"看不见/穿模"）。</summary>
+    public Transform ViewTransform => playerBody != null && playerBody.PlayerCamera != null
+        ? playerBody.PlayerCamera.transform : null;
+
     private body playerBody;
     private HandPoseController hands;
+    private ArmsPitchFollow arms;
     private InteractionHUD hud;
     private IInteractable focused; // 当前准星对准的可交互物（null = 没有）
     private Coroutine gestureRoutine; // 进行中的交互手势（推门/撑压），防止连点叠加
@@ -165,21 +199,33 @@ public class Interactor : MonoBehaviour
     {
         if (hands == null) return;
         if (CarriedItem == null) hands.SetPose(HandPoseController.Hand.Both, HandPoseController.Pose.None);
-        else if (CarriedItem.Carry == PickupItem.CarryMode.OneHand)
-            hands.SetPose(HandPoseController.Hand.Right, HandPoseController.Pose.Grip);
-        else
-            hands.SetPose(HandPoseController.Hand.Both, HandPoseController.Pose.Carry);
+        else ApplyCarryPose(hands, CarriedItem.Carry);
+    }
+
+    // 持物模式 → 手部姿态。拿起、手势结束恢复、后续新增入口都走这里，
+    // 保证「模式↔姿态」的对应关系只有一处（之前两处 if/else 各写一遍，加模式时漏一处就会不一致）。
+    private static void ApplyCarryPose(HandPoseController hands, PickupItem.CarryMode mode)
+    {
+        if (hands == null) return;
+        switch (mode)
+        {
+            case PickupItem.CarryMode.OneHand:
+                hands.SetPose(HandPoseController.Hand.Right, HandPoseController.Pose.Grip);
+                break;
+            case PickupItem.CarryMode.TwoHands:
+                hands.SetPose(HandPoseController.Hand.Both, HandPoseController.Pose.Carry);
+                break;
+            default:   // HandleAndNozzle：右手握提把/压把双柄、左手前伸握软管喷头（左右完全不对称）
+                hands.SetPose(HandPoseController.Hand.Both, HandPoseController.Pose.Extinguisher);
+                break;
+        }
     }
 
     // 拿起物品（由 PickupItem.Interact 调用）：占用持物槽、吸附到锚点、切手部姿态
     public void NotifyPickedUp(PickupItem item)
     {
         CarriedItem = item;
-        if (hands != null)
-        {
-            if (item.Carry == PickupItem.CarryMode.OneHand) hands.SetPose(HandPoseController.Hand.Right, HandPoseController.Pose.Grip);
-            else hands.SetPose(HandPoseController.Hand.Both, HandPoseController.Pose.Carry);
-        }
+        ApplyCarryPose(hands, item.Carry);
     }
 
     // 轻放手中物品（E 键，没瞄准其他目标时）：原地松手自然落下
@@ -208,6 +254,7 @@ public class Interactor : MonoBehaviour
     private void CreateAnchors()
     {
         ArmsPitchFollow follow = FindFirstObjectByType<ArmsPitchFollow>();
+        arms = follow;   // 缓存：持物俯仰要与手臂支点严格同幅时按它反算
         Transform pivot = follow != null ? follow.Pivot : null;
         Transform parent = pivot != null ? pivot : transform;
         Vector3 scale = pivot != null ? Vector3.one : new Vector3(2f, 1f, 2f);
