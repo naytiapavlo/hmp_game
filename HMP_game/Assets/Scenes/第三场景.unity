@@ -641,9 +641,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8339503c58adeb74c837e8a7022e2930, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HMProtection.Core.LevelBootstrapper
-  defaultLevelId: level_1_initial_fire
+  defaultLevelId: level_2_extinguisher_fire
   spawnAnchorPath: "\u951A\u70B9_\u51FA\u751F\u70B9"
-  autoStart: 0
+  autoStart: 1
   teleportPlayerToSpawn: 1
 --- !u!4 &134839637
 Transform:

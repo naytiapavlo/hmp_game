@@ -1,0 +1,39 @@
+{
+  "id": "level_2_extinguisher_fire",
+  "displayName": "灭火器扑救",
+  "description": "办公区插排起火：用灭火器完成器材检查、拔销、瞄准根部、压把与扫射，扑灭后观察是否复燃。",
+  "spawnPoint": "LevelBootstrapper/锚点_出生点",
+
+  "stages": [
+    {
+      "id": "free_roam_extinguish",
+      "displayName": "灭火器操作（自由练习）",
+      "kind": "freeRoam",
+      "duration": 0.0,
+      "timed": false,
+      "fireCue": "fire_initial",
+      "playerControl": true,
+      "frameFire": true,
+      "freezeFire": false
+    }
+  ],
+
+  "quiz": null,
+
+  "guidanceRoutes": [
+    {
+      "id": "route_extinguisher",
+      "label": "Extinguisher",
+      "destinationPath": "场景/SM_Extinguisher_01",
+      "visibleDuringPlay": true
+    }
+  ],
+
+  "fireCues": [
+    { "id": "fire_out",     "level": "None",      "intensity": 0.0, "scale": 1.0, "smokeAmount": 0.0, "useVfxParams": false },
+    { "id": "fire_smoke",   "level": "SmokeOnly", "intensity": 1.0, "scale": 1.0, "smokeAmount": 1.0, "useVfxParams": false },
+    { "id": "fire_initial", "level": "Small",     "intensity": 1.0, "scale": 1.0, "smokeAmount": 1.0, "useVfxParams": false },
+    { "id": "fire_medium",  "level": "Medium",    "intensity": 1.0, "scale": 1.0, "smokeAmount": 1.0, "useVfxParams": false },
+    { "id": "fire_large",   "level": "Large",     "intensity": 1.0, "scale": 1.0, "smokeAmount": 1.0, "useVfxParams": false }
+  ]
+}

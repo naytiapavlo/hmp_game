@@ -8,7 +8,23 @@
       "status": "available",
       "unlockAfter": "",
       "order": 1,
-      "transitionVideo": "起火"
+      "transitionVideo": "起火",
+      "cardTitle": "OFFICE",
+      "cardDescription": "Office fire safety training",
+      "cardImage": ""
+    },
+    {
+      "id": "level_2_extinguisher_fire",
+      "displayName": "灭火器扑救",
+      "sceneName": "第三场景",
+      "configPath": "Configs/Levels/level_2_extinguisher_fire",
+      "status": "available",
+      "unlockAfter": "",
+      "order": 2,
+      "transitionVideo": "",
+      "cardTitle": "EXTINGUISHER",
+      "cardDescription": "Extinguisher firefighting drill",
+      "cardImage": ""
     }
   ]
 }

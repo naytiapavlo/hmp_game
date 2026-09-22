@@ -6,28 +6,36 @@
 
 ```
 Assets/Resources/Configs/
-├─ levels.json                          关卡注册表（列表 / 顺序 / 解锁）
-└─ Levels/level_1_initial_fire.json     单关配置（出生点 / 阶段 / 题库 / 指引 / 火势）
+├─ levels.json                               关卡注册表（列表 / 顺序 / 解锁 / 卡片文案）
+└─ Levels/level_1_initial_fire.json          第一关：初起火灾应对（办公室场景）
+    Levels/level_2_extinguisher_fire.json    第二关：灭火器扑救（第三场景）
 ```
 
 ## 加一个新关卡（三步，零逻辑代码）
 
-1. 做关卡场景，放一个 `LevelBootstrapper`（Editor 菜单 `Tools/Level1/Install Flow Runner` 会自动装配）；
+1. 做关卡场景，放一个 `LevelBootstrapper`（含 `锚点_出生点` 子物体；Editor 菜单 `Tools/Level1/Install Flow Runner`
+   是第一关的装配器模板，第二关见 `Tools/Level2/接入第二关`）；
 2. 写 `Resources/Configs/Levels/level_xxx.json`；
-3. `levels.json` 的 `levels` 数组加一条 → 选关界面（改造后）自动出现新卡片。
+3. `levels.json` 的 `levels` 数组加一条 → **选关窗口自动出现新卡片**（`SceneSelectUI` 读注册表生成，2026-09-22 起已实现）。
+
+**记得把场景加进 `EditorBuildSettings`（Scenes In Build）**——运行时不按路径找场景，只按 `sceneName` 在构建列表里反查；
+没加进去时选关窗口会打印 `[SceneSelect] 关卡场景不在构建列表里：…`，不会静默黑屏。
 
 ## levels.json 字段（§3.1）
 
 | 字段 | 说明 |
 |---|---|
 | `id` | 关卡唯一标识（内部引用 / 解锁依赖 / 存档记录用） |
-| `displayName` | 卡片显示名 |
-| `sceneName` | 目标场景名；`LevelBootstrapper` 直开场景时按它反查 |
+| `displayName` | 关卡显示名（中文，用于日志与内部引用） |
+| `sceneName` | 目标场景名；`LevelBootstrapper` 直开场景时按它反查，也是构建列表里的查找键 |
 | `configPath` | 该关 JSON 在 Resources 下的路径（不含扩展名） |
-| `status` | `available` / `locked` / `comingSoon` |
+| `status` | `available` / `locked` / `comingSoon`（选关卡片三态，非 `available` 一律不可选） |
 | `unlockAfter` | 锁定态的解锁条件：另一关的 `id`；空 = 不依赖 |
 | `order` | 卡片排序 |
-| `transitionVideo` | 进关 CG 视频名（`Assets/CG` 下的 mp4，空 = 无 CG） |
+| `transitionVideo` | 进关 CG 视频名（`Assets/CG` 下的 mp4，空 = 无 CG 直接进） |
+| `cardTitle` | 选关卡片的标题（主菜单视觉是英文，卡片文案走这里；空 = 用 `displayName`） |
+| `cardDescription` | 选关卡片的副标题（空 = 用 `displayName`） |
+| `cardImage` | 选关卡片的切图，**Resources 下的 Sprite 路径**（如 `SceneSelection/OfficePreview`）；空 = 不显示预览图 |
 
 ## 单关配置字段（§3.2）
 
