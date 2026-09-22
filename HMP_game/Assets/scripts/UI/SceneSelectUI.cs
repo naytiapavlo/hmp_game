@@ -93,6 +93,7 @@ namespace HMProtection.UI
             startButton.interactable = officeCard.interactable = backButton.interactable = closeButton.interactable = false;
             // 起火 CG 转场：立刻闪黑盖住界面，CG 与场景加载并行
             if (cgTransition != null && cgTransition.HasClip) cgTransition.BeginCgTransition();
+            else QuizLoadingOverlay.Show();
             loadingOverlay.SetActive(true);
             loadingProgress.fillAmount = 0;
             loadingLabel.text = "Loading Office... 0%";
@@ -108,6 +109,7 @@ namespace HMProtection.UI
                 HMProtection.Quiz.OfficeFireChoiceFlow.CancelPendingEntry();
                 loading = false;
                 if (cgTransition != null && cgTransition.HasClip) cgTransition.CancelTransition(); // 黑场退回，别把用户困在黑屏里
+                QuizLoadingOverlay.Hide();
                 loadingOverlay.SetActive(false);
                 officeCard.interactable = backButton.interactable = closeButton.interactable = true;
                 startButton.interactable = officeSelected;
@@ -122,6 +124,7 @@ namespace HMProtection.UI
                 float progress = Mathf.Clamp01(operation.progress / .9f);
                 loadingProgress.fillAmount = progress;
                 loadingLabel.text = "Loading Office... " + Mathf.RoundToInt(progress * 100) + "%";
+                QuizLoadingOverlay.SetProgress(.05f + .1f * progress, "Loading the training scene...");
                 yield return null;
             }
             loadingProgress.fillAmount = 1;

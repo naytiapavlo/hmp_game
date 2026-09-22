@@ -19,7 +19,7 @@ namespace HMProtection.Quiz
         public string ArmedTargetId {get;private set;}
         HMProtection.Core.LevelFlowRunner runner; bool pausedByUs, pendingReview;
         void Awake(){if(instructor==null)instructor=GetComponent<InstructorLessonView>();if(instructor==null)instructor=gameObject.AddComponent<InstructorLessonView>();}
-        void OnEnable(){flow.RouteStarted+=Arm;flow.QuestionPresented+=ResetQuestion;feedback.onDismissed.AddListener(ShowReview);instructor.Closed+=Resume;if(timer!=null)timer.TimedOut+=OnTimerExpired;}
+        void OnEnable(){flow.RouteStarted+=Arm;flow.QuestionPresented+=ResetQuestion;feedback.onDismissed.AddListener(ShowReview);instructor.Closing+=PrepareTransition;instructor.Closed+=Resume;if(timer!=null)timer.TimedOut+=OnTimerExpired;}
         void ResetQuestion(){Completed=false;ArmedOption=null;ArmedTargetId=null;foreach(var t in targets)t.SetArmed(false);}
         void Start(){foreach(var t in targets)t.SetArmed(false);}
         void Arm(OfficeFireChoiceFlow.Destination d){Completed=false;ArmedOption=d.optionId;ArmedTargetId=string.IsNullOrEmpty(d.targetId)?d.optionId:d.targetId;foreach(var t in targets)t.SetArmed(t.optionId==ArmedTargetId);}
@@ -65,7 +65,8 @@ namespace HMProtection.Quiz
             else Debug.LogWarning("[InstructorLesson] "+error,this);
             Resume();
         }
-        void Resume(){pendingReview=false;if(pausedByUs && runner!=null)runner.SetPaused(false);pausedByUs=false;}
-        void OnDisable(){if(timer!=null){timer.TimedOut-=OnTimerExpired;timer.StopCountdown();}if(flow!=null){flow.RouteStarted-=Arm;flow.QuestionPresented-=ResetQuestion;}if(feedback!=null){feedback.onDismissed.RemoveListener(ShowReview);feedback.Dismiss();}if(instructor!=null){instructor.Closed-=Resume;instructor.Dismiss();}Resume();if(targets!=null)foreach(var t in targets)if(t!=null)t.SetArmed(false);}
+        void PrepareTransition(){if(isActiveAndEnabled && pendingReview && runner!=null)runner.PrepareNextQuizTransition();}
+        void Resume(){PrepareTransition();pendingReview=false;if(pausedByUs && runner!=null)runner.SetPaused(false);pausedByUs=false;}
+        void OnDisable(){if(timer!=null){timer.TimedOut-=OnTimerExpired;timer.StopCountdown();}if(flow!=null){flow.RouteStarted-=Arm;flow.QuestionPresented-=ResetQuestion;}if(feedback!=null){feedback.onDismissed.RemoveListener(ShowReview);feedback.Dismiss();}if(instructor!=null){instructor.Closing-=PrepareTransition;instructor.Closed-=Resume;instructor.Dismiss();}Resume();if(targets!=null)foreach(var t in targets)if(t!=null)t.SetArmed(false);}
     }
 }

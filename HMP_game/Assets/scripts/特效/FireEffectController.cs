@@ -98,7 +98,7 @@ public class FireEffectController : MonoBehaviour
 
     private void Update()
     {
-        if (!debugMode || !Application.isPlaying) return;
+        if (!debugMode || !Application.isPlaying || HMProtection.UI.QuizLoadingOverlay.IsVisible) return;
         Keyboard kb = Keyboard.current;
         if (kb == null || !kb.f9Key.wasPressedThisFrame) return;
         FireLevel next = CurrentLevel switch

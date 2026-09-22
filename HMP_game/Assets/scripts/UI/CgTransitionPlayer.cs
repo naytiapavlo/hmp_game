@@ -7,7 +7,7 @@ using UnityEngine.Video;
 namespace HMProtection.UI
 {
     /// <summary>
-    /// CG 转场播放器：选完场景后闪黑 → 全屏播放起火 CG → 进第一人称前黑场渐出。
+    /// CG 转场播放器：章节标题页 → 全屏起火 CG → 加载进度页 → 准备好的俯视选择题。
     /// 挂在场景根物体「CG转场」上（必须是根物体，DontDestroyOnLoad 才能跨场景存活；
     /// 场景里默认保持未激活，由本脚本在转场开始时激活）。
     /// 由 SceneSelectUI 在开始加载时调用 BeginCgTransition()，全程与场景加载并行。
@@ -26,13 +26,15 @@ namespace HMProtection.UI
 
         [Tooltip("点开训练后黑场渐入时长（秒），「闪黑」要快")]
         [SerializeField] private float fadeOutDuration = 0.25f;
-        [Tooltip("进入第一人称后黑场渐出时长（秒）")]
-        [SerializeField] private float fadeInDuration = 0.6f;
         [Tooltip("跳过保护期（秒）：开始播放后这么短时间内不接受跳过输入")]
         [SerializeField] private float skipGracePeriod = 0.4f;
+        [Tooltip("第一关章节标题完整显示的停留时间，不含淡入淡出（秒）")]
+        [SerializeField] private float chapterHoldSeconds = 2f;
 
         /// <summary>CG 是否已播完（SceneSelectUI 等它为 true 才激活目标场景）。</summary>
         public bool VideoDone { get; private set; }
+        public bool IsChapterShowing => chapter != null && chapter.IsShowing;
+        private LevelChapterCard chapter;
 
         private bool playing;
         private bool sceneActivated;
@@ -71,14 +73,14 @@ namespace HMProtection.UI
 
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            // 任何新场景激活（即办公室场景）都视为可以开始渐出
+            // 办公室激活后交给独立加载页，直到俯视题目准备完成。
             if (playing && !canceled) sceneActivated = true;
         }
 
         /// <summary>是否具备播放条件（视频片段已配置）。</summary>
         public bool HasClip => videoPlayer != null && videoPlayer.clip != null;
 
-        /// <summary>开始转场：闪黑 → 播 CG → 停在黑场，等场景激活后渐出。</summary>
+        /// <summary>开始转场：闪黑 → 章节标题 → CG → 加载页；等待场景激活后交接给题目流程。</summary>
         public void BeginCgTransition()
         {
             if (playing || !HasClip) return;
@@ -101,13 +103,22 @@ namespace HMProtection.UI
         private IEnumerator TransitionRoutine()
         {
             videoImage.enabled = false;
+            videoPlayer.Stop();
+            VideoDone = false;
 
             // 1) 闪黑：菜单快速沉入黑场
             yield return Fade(blackout, 0f, 1f, fadeOutDuration);
 
+            // Announce the chapter first. Input during this card cannot skip the following CG.
+            chapter = GetComponent<LevelChapterCard>();
+            if (chapter == null) chapter = gameObject.AddComponent<LevelChapterCard>();
+            yield return chapter.Play(chapterHoldSeconds);
+
             // 2) 全屏播放 CG（办公室场景在黑场后面并行预载）
             VideoDone = false;
             playbackEnded = playbackFailed = false;
+            videoPlayer.timeUpdateMode = VideoTimeUpdateMode.UnscaledGameTime;
+            videoPlayer.waitForFirstFrame = false;
             videoPlayer.Prepare();
             float prepareGuard = 15f;
             while (!videoPlayer.isPrepared && !playbackFailed && prepareGuard > 0f)
@@ -118,21 +129,29 @@ namespace HMProtection.UI
             if (videoPlayer.isPrepared && !playbackFailed)
             {
                 videoImage.enabled = true;
+                // Commit the prepared render target before starting the native decoder.
+                yield return null;
                 videoPlayer.Play();
             }
             else playbackFailed = true;
 
             double limit = videoPlayer.clip.length + 5.0; // 兜底：解码异常时不卡死
             float elapsed = 0f;
+            float retryAt = 1f;
             while (!playbackFailed && !playbackEnded && elapsed < limit)
             {
                 elapsed += Time.unscaledDeltaTime;
+                if (videoPlayer.isPrepared && !videoPlayer.isPlaying && videoPlayer.frame < 0 && elapsed >= retryAt)
+                { videoPlayer.Play(); retryAt = elapsed + 1f; }
                 // 播放保护期过后，任意按键/鼠标跳过
                 if (elapsed > skipGracePeriod && SkipPressed()) break;
                 yield return null;
             }
             videoPlayer.Stop();
             videoImage.enabled = false;
+            QuizLoadingOverlay.Show();
+            QuizLoadingOverlay.SetProgress(.05f, "Loading the training scene...");
+            blackout.enabled = false;
             VideoDone = true; // SceneSelectUI 看到 true 才 allowSceneActivation
 
             // 3) 停在黑场，等目标场景激活（sceneLoaded 回调置位；30 秒兜底）
@@ -143,14 +162,16 @@ namespace HMProtection.UI
                 yield return null;
             }
 
-            // 4) 黑场渐出，露出第一人称画面
-            yield return Fade(blackout, 1f, 0f, fadeInDuration);
+            // Keep the loading cover alive independently; the runner and overview take over.
+            QuizLoadingOverlay.SetProgress(.15f, "Preparing the training environment...");
             canvasRoot.SetActive(false);
             Destroy(gameObject);
         }
 
         private IEnumerator CancelRoutine()
         {
+            if (chapter != null) chapter.Hide();
+            QuizLoadingOverlay.Hide();
             if (videoPlayer != null) videoPlayer.Stop();
             yield return Fade(blackout, blackout.color.a, 0f, 0.2f);
             canvasRoot.SetActive(false);

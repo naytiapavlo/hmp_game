@@ -136,7 +136,7 @@ public static class OfficeLessonSequenceChecks
         view.Advance(); yield return Delay(.25f);
         Need(view.Step == InstructorLessonView.LessonStep.Third && view.DialogueText.text == lines.third, "Line 3 after video slot");
         if (runner.IsRunning) Need(runner.CurrentStageId == stage && runner.IsPaused, "No next question before final continue");
-        view.Advance(); yield return Delay(.1f);
+        view.Advance(); yield return Until(() => !view.IsShowing);
         Need(!owner.IsPresentationActive && player.enabled && actor.enabled, "Review restores controls");
     }
     static IEnumerator Check()

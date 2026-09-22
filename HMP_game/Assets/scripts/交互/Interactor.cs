@@ -85,6 +85,7 @@ public class Interactor : MonoBehaviour
 
     private void Update()
     {
+        if (HMProtection.UI.QuizLoadingOverlay.IsVisible) return;
         Keyboard kb = Keyboard.current;
         if (kb == null) return;
         bool ePressed = kb.eKey.wasPressedThisFrame;

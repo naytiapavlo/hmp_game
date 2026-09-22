@@ -5,6 +5,8 @@ using System.IO;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Controls;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 using UnityEngine.Video;
@@ -19,14 +21,21 @@ namespace HMProtection.Quiz
         public bool IsShowing { get; private set; }
         public LessonStep Step { get; private set; }
         public string LastVideoError { get; private set; }
-        public Button ContinueButton => next;
+        public TMP_Text InputHint => inputHint;
+        public bool IsClosing { get; private set; }
         public TMP_Text DialogueText => dialogue;
         public VideoPlayer Player => video;
         public event Action Closed;
+        public event Action Closing;
 
         GameObject overlay, fallbackSystem;
-        TMP_Text dialogue, speaker, status, progress, nextLabel, outcome;
-        Button next;
+        TMP_Text dialogue, status, progress, inputHint, outcome, screenKicker;
+        CanvasGroup overlayGroup, dialogueGroup;
+        RectTransform motionRoot, dialogueRoot;
+        Coroutine entrance, lineTransition, closing;
+        bool inputArmed;
+        int lastAdvanceFrame = -1;
+        const float InputGuardSeconds = .22f;
         RawImage videoImage;
         VideoPlayer video;
         RenderTexture videoTexture;
@@ -48,13 +57,14 @@ namespace HMProtection.Quiz
             if (branch == null) return false;
             if (overlay == null) BuildView();
             config = lesson; lines = branch; LastVideoError = null;
-            IsShowing = true;
+            IsShowing = true; IsClosing = false;
             oldLock = Cursor.lockState; oldCursor = Cursor.visible;
             oldSelection = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
             foreach (var root in gameObject.scene.GetRootGameObjects())
             {
                 foreach (var b in root.GetComponentsInChildren<Behaviour>(true))
-                    if (b is body || b is Interactor) { controls[b] = b.enabled; b.enabled = false; }
+                    if (b is body || b is Interactor || b is GuidanceSystem || b is FireEffectController)
+                    { controls[b] = b.enabled; b.enabled = false; }
                 foreach (var h in root.GetComponentsInChildren<InteractionHUD>(true))
                 { hud[h.gameObject] = h.gameObject.activeSelf; h.gameObject.SetActive(false); }
             }
@@ -69,12 +79,15 @@ namespace HMProtection.Quiz
             }
             Cursor.lockState = CursorLockMode.None; Cursor.visible = true;
             overlay.SetActive(true);
-            speaker.text = lesson.speaker;
+            EventSystem.current?.SetSelectedGameObject(null);
             outcome.text = correct ? "CORRECT  /  LET'S REVIEW" : "INCORRECT  /  LET'S LEARN";
             outcome.color = correct ? new Color(.48f, .95f, .72f) : new Color(1f, .48f, .42f);
-            status.text = "FIRE SAFETY\n\nA moment to learn";
+            status.text = "Let's review\nyour decision.";
+            screenKicker.text = "FIRE SAFETY  /  FIELD NOTES";
+            screenKicker.gameObject.SetActive(true);
             videoImage.gameObject.SetActive(false);
             ShowLine(LessonStep.First);
+            entrance = StartCoroutine(AnimateEntrance());
             return true;
         }
 
@@ -83,29 +96,95 @@ namespace HMProtection.Quiz
             Step = step;
             dialogue.text = step == LessonStep.First ? lines.first : step == LessonStep.Second ? lines.second : lines.third;
             progress.text = step == LessonStep.First ? "01 / 03" : step == LessonStep.Second ? "02 / 03" : "03 / 03";
-            nextLabel.text = step == LessonStep.Second ? "Watch video  >" : step == LessonStep.Third ? "Continue training  >" : "Next  >";
-            next.interactable = true;
-            inputAfter = Time.unscaledTime + .2f;
-            EventSystem.current?.SetSelectedGameObject(next.gameObject);
+            inputHint.text = step == LessonStep.Second ? "PRESS ANY KEY TO PLAY VIDEO" : step == LessonStep.Third ? "PRESS ANY KEY TO CONTINUE TRAINING" : "PRESS ANY KEY TO CONTINUE";
+            if (lineTransition != null) StopCoroutine(lineTransition);
+            lineTransition = StartCoroutine(AnimateLine());
+            ResetInputGate();
         }
 
         public void Advance()
         {
-            if (!IsShowing || Time.unscaledTime < inputAfter) return;
-            inputAfter = Time.unscaledTime + .2f;
+            if (!IsShowing || IsClosing || Time.unscaledTime < inputAfter || lastAdvanceFrame == Time.frameCount) return;
+            lastAdvanceFrame = Time.frameCount;
+            ResetInputGate();
             if (Step == LessonStep.First) ShowLine(LessonStep.Second);
             else if (Step == LessonStep.Second)
             {
                 Step = LessonStep.Video;
-                progress.text = "VIDEO"; nextLabel.text = "Skip video  >";
+                progress.text = "VIDEO REVIEW"; inputHint.text = "PRESS ANY KEY TO SKIP VIDEO";
                 playback = StartCoroutine(PlayVideo());
             }
             else if (Step == LessonStep.Video)
             {
                 StopVideo();
+                status.text = "Keep the lesson\nin mind.";
+                screenKicker.text = "FIRE SAFETY  /  TAKE IT FORWARD"; screenKicker.gameObject.SetActive(true);
                 ShowLine(LessonStep.Third);
             }
-            else Dismiss();
+            else { IsClosing = true; Closing?.Invoke(); closing = StartCoroutine(AnimateExit()); }
+        }
+
+        void ResetInputGate() { inputArmed = false; inputAfter = Time.unscaledTime + InputGuardSeconds; }
+        void Update()
+        {
+            if (!IsShowing || IsClosing) return;
+            if (!inputArmed)
+            {
+                if (Time.unscaledTime >= inputAfter && !AnyInput(false)) inputArmed = true;
+                return;
+            }
+            if (AnyInput(true)) Advance();
+        }
+        // Mouse movement/scroll is not a continue key. Each step requires release before another press.
+        static bool AnyInput(bool pressedThisFrame)
+        {
+            bool Read(ButtonControl button) => button != null && (pressedThisFrame ? button.wasPressedThisFrame : button.isPressed);
+            if (Read(Keyboard.current?.anyKey)) return true;
+            var mouse = Mouse.current;
+            if (mouse != null && (Read(mouse.leftButton) || Read(mouse.rightButton) || Read(mouse.middleButton)
+                || Read(mouse.forwardButton) || Read(mouse.backButton))) return true;
+            var gamepad = Gamepad.current;
+            if (gamepad != null)
+                foreach (var control in gamepad.allControls)
+                    if (control is ButtonControl button && Read(button)) return true;
+            return false;
+        }
+        IEnumerator AnimateEntrance()
+        {
+            float start = Time.unscaledTime;
+            overlayGroup.alpha = 0f;
+            while (Time.unscaledTime - start < .28f)
+            {
+                float t = Mathf.Clamp01((Time.unscaledTime - start) / .28f);
+                float ease = 1f - Mathf.Pow(1f - t, 3f);
+                overlayGroup.alpha = ease; motionRoot.anchoredPosition = new Vector2(0f, -16f * (1f - ease));
+                yield return null;
+            }
+            overlayGroup.alpha = 1f; motionRoot.anchoredPosition = Vector2.zero; entrance = null;
+        }
+        IEnumerator AnimateLine()
+        {
+            float start = Time.unscaledTime;
+            dialogueGroup.alpha = 0f;
+            while (Time.unscaledTime - start < .18f)
+            {
+                float t = Mathf.Clamp01((Time.unscaledTime - start) / .18f);
+                float ease = 1f - Mathf.Pow(1f - t, 3f);
+                dialogueGroup.alpha = ease; dialogueRoot.anchoredPosition = new Vector2(0f, -6f * (1f - ease));
+                yield return null;
+            }
+            dialogueGroup.alpha = 1f; dialogueRoot.anchoredPosition = Vector2.zero; lineTransition = null;
+        }
+        IEnumerator AnimateExit()
+        {
+            float start = Time.unscaledTime;
+            while (Time.unscaledTime - start < .18f)
+            {
+                float t = Mathf.Clamp01((Time.unscaledTime - start) / .18f);
+                overlayGroup.alpha = 1f - t * t; motionRoot.anchoredPosition = new Vector2(0f, -8f * t * t);
+                yield return null;
+            }
+            closing = null; Dismiss();
         }
 
         public static string ResolveVideoPath(string path)
@@ -120,7 +199,8 @@ namespace HMProtection.Quiz
         IEnumerator PlayVideo()
         {
             videoEnded = videoFailed = false; LastVideoError = null;
-            status.text = "Loading lesson...";
+            status.text = "Preparing\nyour lesson...";
+            screenKicker.text = "FIRE SAFETY  /  LESSON VIDEO";
             string path = null;
             try { path = ResolveVideoPath(config.videoPath); }
             catch (Exception e) { LastVideoError = e.Message; }
@@ -140,7 +220,7 @@ namespace HMProtection.Quiz
             }
             float aspect = video.height > 0 ? (float)video.width / video.height : 16f / 9f;
             videoImage.GetComponent<AspectRatioFitter>().aspectRatio = aspect;
-            status.text = ""; videoImage.gameObject.SetActive(true);
+            status.text = ""; screenKicker.gameObject.SetActive(false); videoImage.gameObject.SetActive(true);
             // Commit the prepared output for a frame before starting the native decoder.
             yield return null;
             video.Play();
@@ -159,6 +239,7 @@ namespace HMProtection.Quiz
             if (videoFailed) { VideoUnavailable(LastVideoError); yield break; }
             video.Stop(); videoImage.gameObject.SetActive(false);
             status.text = "LESSON COMPLETE";
+            screenKicker.text = "FIRE SAFETY  /  TAKE IT FORWARD"; screenKicker.gameObject.SetActive(true);
             playback = null;
             ShowLine(LessonStep.Third);
         }
@@ -167,7 +248,9 @@ namespace HMProtection.Quiz
         {
             LastVideoError = reason; video.Stop(); videoImage.gameObject.SetActive(false);
             status.text = "Lesson video is unavailable.\n\nYou can continue the review.";
-            nextLabel.text = "Continue review  >";
+            screenKicker.gameObject.SetActive(true);
+            inputHint.text = "PRESS ANY KEY TO CONTINUE";
+            ResetInputGate();
             Debug.LogWarning("[InstructorLesson] " + reason, this);
             playback = null;
         }
@@ -183,14 +266,18 @@ namespace HMProtection.Quiz
         public void Dismiss()
         {
             if (!IsShowing) return;
+            if (entrance != null) StopCoroutine(entrance);
+            if (lineTransition != null) StopCoroutine(lineTransition);
+            if (closing != null) StopCoroutine(closing);
+            entrance = lineTransition = closing = null;
             StopVideo(); overlay.SetActive(false);
             foreach (var item in controls) if (item.Key != null) item.Key.enabled = item.Value;
             foreach (var item in hud) if (item.Key != null) item.Key.SetActive(item.Value);
             controls.Clear(); hud.Clear();
             if (fallbackSystem != null) fallbackSystem.SetActive(false);
             Cursor.lockState = oldLock; Cursor.visible = oldCursor;
-            EventSystem.current?.SetSelectedGameObject(oldSelection);
-            IsShowing = false; Closed?.Invoke();
+            EventSystem.current?.SetSelectedGameObject(oldSelection != null && oldSelection.activeInHierarchy ? oldSelection : null);
+            IsShowing = false; IsClosing = false; inputArmed = false; Closed?.Invoke();
         }
         void OnDisable() => Dismiss();
         void OnDestroy()
@@ -201,47 +288,52 @@ namespace HMProtection.Quiz
 
         void BuildView()
         {
-            overlay = new GameObject("Instructor Lesson", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            overlay = new GameObject("Instructor Lesson", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster), typeof(CanvasGroup));
             overlay.transform.SetParent(transform, false);
+            overlayGroup = overlay.GetComponent<CanvasGroup>();
             var canvas = overlay.GetComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceOverlay; canvas.sortingOrder = 31100;
             var scaler = overlay.GetComponent<CanvasScaler>(); scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920, 1080); scaler.matchWidthOrHeight = .5f;
             var shade = Rect("Backdrop", overlay.transform, 0, 0, 0, 0);
             shade.anchorMin = Vector2.zero; shade.anchorMax = Vector2.one; shade.offsetMin = shade.offsetMax = Vector2.zero;
-            shade.gameObject.AddComponent<Image>().color = new Color(.035f, .028f, .03f, .98f);
+            shade.gameObject.AddComponent<InstructorBackdropGraphic>();
             var stage = Rect("Layout", overlay.transform, 0, 0, 1920, 1080);
             stage.anchorMin = stage.anchorMax = stage.pivot = new Vector2(.5f, .5f);
             stage.anchoredPosition = Vector2.zero;
             var fitter = stage.gameObject.AddComponent<AspectRatioFitter>(); fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent; fitter.aspectRatio = 16f / 9f;
             // Children use normalized reference coordinates, keeping layout inside ultrawide / 4:3 screens.
-            var layout = Rect("Reference", stage, 0, 0, 1920, 1080);
-            layout.anchorMin = layout.anchorMax = Vector2.zero;
-            layout.gameObject.AddComponent<InstructorLessonLayout>();
-            Text("Eyebrow", layout, 72, 975, 1000, 50, 24, "HM PROTECTION  /  TRAINING REVIEW").color = new Color(.7f, .65f, .62f);
-            outcome = Text("Outcome", layout, 72, 919, 1100, 55, 36, ""); outcome.fontStyle = FontStyles.Bold;
-            Artwork("Television", layout, "Television", 0, 250, 1280, 740);
-            var screen = Rect("Screen", layout, 72, 407, 1140, 506);
-            screen.gameObject.AddComponent<Image>().color = new Color(.035f, .045f, .055f);
+            var reference = Rect("Reference", stage, 0, 0, 1920, 1080);
+            reference.gameObject.AddComponent<InstructorLessonLayout>();
+            motionRoot = Rect("Presentation", reference, 0, 0, 1920, 1080);
+            var layout = motionRoot;
+            Text("Eyebrow", layout, 80, 1029, 1100, 30, 20, "HM PROTECTION  /  TRAINING REVIEW").color = new Color(.62f, .66f, .70f);
+            outcome = Text("Outcome", layout, 80, 980, 1100, 44, 32, ""); outcome.fontStyle = FontStyles.Bold;
+            // Reserve space above the supplied nameplate so it never covers the video picture.
+            var televisionRoot = Rect("Television Stage", layout, 57.6f, 93.6f, 1920, 1080);
+            televisionRoot.localScale = Vector3.one * .91f;
+            Artwork("Television", televisionRoot, "Television", 0, 300, 1280, 740);
+            var screen = Rect("Screen", televisionRoot, 72, 457, 1140, 506);
+            screen.gameObject.AddComponent<Image>().color = new Color(.035f, .045f, .06f);
             videoImage = Rect("Video", screen, 0, 0, 1140, 506).gameObject.AddComponent<RawImage>();
             videoImage.rectTransform.anchorMin = videoImage.rectTransform.anchorMax = videoImage.rectTransform.pivot = new Vector2(.5f, .5f);
             videoImage.rectTransform.anchoredPosition = Vector2.zero;
             videoImage.raycastTarget = false;
             var videoFit = videoImage.gameObject.AddComponent<AspectRatioFitter>(); videoFit.aspectMode = AspectRatioFitter.AspectMode.FitInParent; videoFit.aspectRatio = 16f / 9f;
-            status = Text("Video Status", screen, 100, 120, 940, 266, 32, ""); status.alignment = TextAlignmentOptions.Center;
-            status.color = new Color(.7f, .75f, .78f);
-            Artwork("Instructor", layout, "Instructor", 1270, 70, 550, 985);
-            var panel = Artwork("Dialogue Frame", layout, "Dialogue", 360, 32, 1490, 370);
-            panel.uvRect = new Rect(0, .265f, 1, .565f);
-            var namePlate = Rect("Name Plate", layout, 487, 298, 325, 78);
-            namePlate.gameObject.AddComponent<Image>().color = new Color(.40f, .055f, .07f);
-            speaker = Text("Speaker", namePlate, 0, 0, 325, 78, 31, "INSTRUCTOR"); speaker.alignment = TextAlignmentOptions.Center; speaker.fontStyle = FontStyles.Bold;
-            dialogue = Text("Dialogue", layout, 435, 122, 1270, 150, 34, ""); dialogue.enableAutoSizing = true; dialogue.fontSizeMin = 25; dialogue.fontSizeMax = 34;
-            progress = Text("Progress", layout, 442, 78, 180, 42, 21, "01 / 03");
-            progress.color = new Color(.7f, .73f, .77f);
-            var buttonRect = Rect("Continue", layout, 1400, 70, 350, 60);
-            var buttonImage = buttonRect.gameObject.AddComponent<Image>(); buttonImage.color = new Color(.6f, .055f, .07f);
-            next = buttonRect.gameObject.AddComponent<Button>(); next.targetGraphic = buttonImage; next.onClick.AddListener(Advance);
-            nextLabel = Text("Label", buttonRect, 0, 0, 350, 60, 25, "Next  >"); nextLabel.alignment = TextAlignmentOptions.Center;
+            status = Text("Video Status", screen, 100, 115, 940, 250, 43, ""); status.alignment = TextAlignmentOptions.Center;
+            status.color = new Color(.84f, .87f, .9f);
+            screenKicker = Text("Screen Kicker", screen, 100, 375, 940, 34, 20, ""); screenKicker.alignment = TextAlignmentOptions.Center;
+            screenKicker.color = new Color(.63f, .68f, .74f);
+            Artwork("Instructor", layout, "Instructor", 1270, 100, 535, 958);
+            // The supplied HAIMO artwork includes its own nameplate and transparent margins.
+            // Keep its native aspect and full UVs so the border and lettering are not stretched/cropped.
+            Artwork("Dialogue Frame", layout, "Dialogue", 72, -18, 1776, 1776f * 725f / 2170f);
+            dialogueRoot = Rect("Dialogue Content", layout, 0, 0, 1920, 1080);
+            dialogueGroup = dialogueRoot.gameObject.AddComponent<CanvasGroup>();
+            dialogue = Text("Dialogue", dialogueRoot, 164, 170, 1580, 170, 34, "");
+            dialogue.enableAutoSizing = true; dialogue.fontSizeMin = 27; dialogue.fontSizeMax = 34; dialogue.lineSpacing = 5f;
+            progress = Text("Progress", layout, 166, 91, 270, 34, 21, "01 / 03"); progress.color = new Color(.62f, .67f, .73f);
+            inputHint = Text("Input Hint", layout, 890, 91, 845, 34, 22, "PRESS ANY KEY TO CONTINUE");
+            inputHint.alignment = TextAlignmentOptions.MidlineRight; inputHint.color = new Color(.83f, .85f, .88f);
             videoTexture = new RenderTexture(1920, 1080, 0) { name = "Instructor Video" }; videoTexture.Create();
             videoImage.texture = videoTexture;
             CreateVideoPlayer();

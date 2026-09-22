@@ -4,7 +4,7 @@
 //   「第一关不通过不阻断后续关卡（本阶段只做第一关，接口先留好）。」
 //
 // 纯数据类（非 MonoBehaviour），由 LevelFlowRunner 持有并在 settlement 阶段读 Summary()。
-// 结算 UI 尚未交付：现在把 Summary() 打进 Console，UI 到位后直接读同样的属性即可。
+// TrainingSettlementView 与 Console 共用这些作答记录，不计入 CG、加载或教官讲解时长。
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -58,6 +58,19 @@ namespace HMProtection.Core
             answers.Count == 0 ? (bool?)null : answers[answers.Count - 1].correct;
 
         public IReadOnlyList<AnswerRecord> Answers => answers;
+
+        /// <summary>三题实际答题与行动耗时合计，排除讲解和加载。</summary>
+        public float TotalElapsedSeconds
+        {
+            get
+            {
+                float total = 0f;
+                foreach (var answer in answers)
+                    if (!float.IsNaN(answer.elapsedSeconds) && !float.IsInfinity(answer.elapsedSeconds))
+                        total += Math.Max(0f, answer.elapsedSeconds);
+                return total;
+            }
+        }
 
         public void Configure(int totalQuestions, float scorePerQuestion, int passCorrectCount)
         {

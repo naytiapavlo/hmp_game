@@ -22,6 +22,7 @@ using HMProtection.Quiz;
 using HMProtection.UI;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 namespace HMProtection.Core
 {
@@ -92,6 +93,7 @@ namespace HMProtection.Core
         private bool destinationReached;
         private bool manualFireOverride;
         private OfficeChoiceInteraction pendingInteraction;
+        private TrainingSettlementView settlement;
         private UnityEngine.Events.UnityAction<string, bool> pendingAnswer;
 
         // ==== 对外控制接口 ====
@@ -99,6 +101,7 @@ namespace HMProtection.Core
         /// <summary>开局：按配置的阶段序列跑一遍。由 LevelBootstrapper 调用。</summary>
         public void Begin(LevelEntry entry, LevelConfigDto config)
         {
+            if (settlement != null) settlement.Dismiss();
             ClearPendingAnswer();
             Entry = entry;
             Config = config;
@@ -143,6 +146,29 @@ namespace HMProtection.Core
             Log("收到「继续」");
         }
 
+        /// <summary>Called before the instructor fades away, so no free-roam frame leaks between lessons.</summary>
+        public void PrepareNextQuizTransition()
+        {
+            if (!IsRunning || stopRequested || Config?.stages == null) return;
+            for (int i = StageIndex + 1; i < Config.stages.Length; i++)
+            {
+                var next = Config.stages[i];
+                if (next == null) continue;
+                if (string.Equals(next.kind, "settlement", StringComparison.OrdinalIgnoreCase))
+                {
+                    QuizLoadingOverlay.Show("PREPARING YOUR RESULTS");
+                    QuizLoadingOverlay.SetProgress(.1f, "Putting your session report together...");
+                    ApplyPlayerControl(false);
+                    return;
+                }
+                if (!string.Equals(next.kind, "quiz", StringComparison.OrdinalIgnoreCase)) continue;
+                QuizLoadingOverlay.Show("PREPARING NEXT QUESTION");
+                QuizLoadingOverlay.SetProgress(.1f, "Updating the training environment...");
+                ApplyPlayerControl(false);
+                return;
+            }
+        }
+
         /// <summary>跳过当前阶段的剩余等待（调试/验收用）。</summary>
         public void SkipStage()
         {
@@ -154,9 +180,11 @@ namespace HMProtection.Core
         /// <summary>中止流程。</summary>
         public void StopLevel()
         {
+            if (settlement != null) settlement.Dismiss();
             stopRequested = true;
             waitingForContinue = false;
             if (routine != null) { StopCoroutine(routine); routine = null; }
+            if (quizFlow != null) quizFlow.CancelQuestion();
             Finish();
         }
 
@@ -183,6 +211,7 @@ namespace HMProtection.Core
         private IEnumerator RunStages()
         {
             IsRunning = true;
+            QuizLoadingOverlay.Show();
 
             // 从主菜单进来时，CG 转场黑场还盖在画面上：等它自然结束再开演，
             // 否则「失火原因动画」会在黑屏后面白播一遍。（兜底 60s，防止 CG 异常时卡死流程）
@@ -197,6 +226,7 @@ namespace HMProtection.Core
                 yield return null;
             }
             yield return null;
+            QuizLoadingOverlay.SetProgress(.2f, "Preparing the training environment...");
 
             StageDto[] stages = Config != null ? Config.stages : null;
             if (stages == null || stages.Length == 0)
@@ -228,8 +258,39 @@ namespace HMProtection.Core
                 case "quiz": yield return QuizStage(stage); break;
                 case "freeroam": yield return FreeRoamStage(stage); break;
                 case "result": yield return ResultStage(stage); break;
-                // cutscene / video / settlement / 其它：按 duration 定时推进
+                case "settlement": yield return SettlementStage(); break;
+                // cutscene / video / 其它：按 duration 定时推进
                 default: yield return TimedStage(stage); break;
+            }
+        }
+
+        private IEnumerator SettlementStage()
+        {
+            if (settlement == null) settlement = GetComponent<TrainingSettlementView>();
+            if (settlement == null) settlement = gameObject.AddComponent<TrainingSettlementView>();
+            QuizLoadingOverlay.SetProgress(.95f, "Your session report is ready");
+            settlement.Show(Score, () => Begin(Entry, Config), () => StartCoroutine(ReturnToMenu()));
+            yield return QuizLoadingOverlay.Reveal();
+        }
+
+        private IEnumerator ReturnToMenu()
+        {
+            const string menuPath = "Assets/Scenes/初始界面.unity";
+            if (!Application.CanStreamedLevelBeLoaded(menuPath))
+            {
+                Debug.LogError("Main menu is not in the build scene list.");
+                settlement.Dismiss();
+                settlement.Show(Score, () => Begin(Entry, Config), () => StartCoroutine(ReturnToMenu()));
+                yield break;
+            }
+            StopLevel();
+            QuizLoadingOverlay.Show("RETURNING TO MAIN MENU");
+            yield return null;
+            var operation = SceneManager.LoadSceneAsync(menuPath, LoadSceneMode.Single);
+            while (!operation.isDone)
+            {
+                QuizLoadingOverlay.SetProgress(Mathf.Clamp01(operation.progress / .9f), "Loading the main menu...");
+                yield return null;
             }
         }
 
@@ -271,6 +332,8 @@ namespace HMProtection.Core
             {
                 if (stopRequested || skipRequested) break;
                 elapsed = Time.realtimeSinceStartup - startedAt;
+                if (QuizLoadingOverlay.IsVisible)
+                    QuizLoadingOverlay.SetProgress(.2f + .6f * Mathf.Clamp01(elapsed / Mathf.Max(.01f, stage.duration)));
 
                 // 失火原因动画：冒烟 →（第 fireCueAt 秒）→ 起火
                 if (!secondaryFired && stage.fireCueAt > 0f
@@ -464,13 +527,14 @@ namespace HMProtection.Core
             bool hasEndCue = correct && !string.IsNullOrEmpty(stage.correctEndFireCue) && stage.correctEndAt > 0f;
             if (hasEndCue)
             {
-                yield return WaitUnscaled(Mathf.Min(stage.correctEndAt, total));
+                float middle = .15f + .65f * Mathf.Clamp01(stage.correctEndAt / Mathf.Max(.01f, total));
+                yield return WaitUnscaled(Mathf.Min(stage.correctEndAt, total), .15f, middle);
                 ApplyFire(stage.correctEndFireCue, "结果动画·正确分支·余烟后熄灭");
-                yield return WaitUnscaled(Mathf.Max(0f, total - stage.correctEndAt));
+                yield return WaitUnscaled(Mathf.Max(0f, total - stage.correctEndAt), middle, .8f);
             }
             else
             {
-                yield return WaitUnscaled(total);
+                yield return WaitUnscaled(total, .15f, .8f);
             }
         }
 
@@ -575,15 +639,16 @@ namespace HMProtection.Core
 
         private void Finish()
         {
+            QuizLoadingOverlay.Hide();
             ClearPendingAnswer();
             IsRunning = false;
             StageIndex = -1;
             IsPaused = false;
-            holdFrozen = false;
+            holdFrozen = settlement != null && settlement.IsShowing;
             RefreshFrozen();
             if (timer != null) timer.Stop();
             if (player == null) player = FindAnyObjectByType<body>();
-            if (player != null) player.controlEnabled = true; // 别把玩家锁死
+            if (player != null) player.controlEnabled = !(settlement != null && settlement.IsShowing);
             routine = null;
             Log("关卡流程结束\n" + Score.Summary());
             LevelFinished?.Invoke(Score);
@@ -593,6 +658,8 @@ namespace HMProtection.Core
 
         private void ResolveReferences()
         {
+            if (settlement == null) settlement = GetComponent<TrainingSettlementView>();
+            if (settlement == null) settlement = gameObject.AddComponent<TrainingSettlementView>();
             if (fire == null) fire = FindAnyObjectByType<FireEffectController>();
             if (quizFlow == null) quizFlow = FindAnyObjectByType<OfficeFireChoiceFlow>();
             if (guidance == null) guidance = FindAnyObjectByType<GuidanceSystem>();
@@ -602,12 +669,15 @@ namespace HMProtection.Core
         }
 
         /// <summary>按墙上时间等待若干秒（不用 deltaTime 累加，避免 deltaTime 退化时流程走不完）。</summary>
-        private IEnumerator WaitUnscaled(float seconds)
+        private IEnumerator WaitUnscaled(float seconds, float progressFrom = -1f, float progressTo = -1f)
         {
             float startedAt = Time.realtimeSinceStartup;
             while (Time.realtimeSinceStartup - startedAt < seconds)
             {
                 if (stopRequested || skipRequested) yield break;
+                if (progressFrom >= 0f && QuizLoadingOverlay.IsVisible)
+                    QuizLoadingOverlay.SetProgress(Mathf.Lerp(progressFrom, progressTo,
+                        Mathf.Clamp01((Time.realtimeSinceStartup - startedAt) / Mathf.Max(.01f, seconds))));
                 yield return null;
             }
         }
@@ -615,6 +685,11 @@ namespace HMProtection.Core
         private void Update()
         {
             if (!debugKeys || Config == null) return;
+            if (settlement != null && settlement.IsShowing) return;
+            if (QuizLoadingOverlay.IsVisible) return;
+            // 教官的“任意键”也包含 F8/F9/F10，展示期间不让调试快捷键改变训练流程。
+            if (quizFlow != null && quizFlow.GetComponent<OfficeChoiceInteraction>() is OfficeChoiceInteraction interaction
+                && interaction.IsPresentationActive) return;
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null) return;
             if (keyboard.f8Key.wasPressedThisFrame) SetPaused(!IsPaused);

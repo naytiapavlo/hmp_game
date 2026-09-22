@@ -88,7 +88,7 @@ public class GuidanceSystem : MonoBehaviour
     private void Update()
     {
         // 调试：F8 准星指向处生成路线
-        if (debugMode && Keyboard.current != null && Keyboard.current.f8Key.wasPressedThisFrame) DebugPickTarget();
+        if (!HMProtection.UI.QuizLoadingOverlay.IsVisible && debugMode && Keyboard.current != null && Keyboard.current.f8Key.wasPressedThisFrame) DebugPickTarget();
         if (!active) return;
 
         Transform player = Player();

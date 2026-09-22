@@ -67,6 +67,7 @@ namespace HMProtection.Quiz
                 destinations.Any(d => d == null || d.approach == null || string.IsNullOrWhiteSpace(d.optionId)) ||
                 destinations.Select(d => d.optionId).Distinct().Count() != 4)
             { Fail("Office question is missing its presenter, guidance system or four destinations."); return; }
+            if (!QuizLoadingOverlay.IsVisible) QuizLoadingOverlay.Show();
             starting = true; routine = StartCoroutine(ShowAfterCg());
         }
         bool ConfigureQuestion()
@@ -91,16 +92,21 @@ namespace HMProtection.Quiz
         }
         IEnumerator ShowAfterCg()
         {
+            // Give the opaque cover a rendered frame before camera fitting and catalogue/layout work.
+            yield return null;
+            QuizLoadingOverlay.SetProgress(.84f, "Setting up the overview...");
             guidance.HideRoute();
             if (!presenter.ReloadCatalog() || !presenter.EnterOverview() || !presenter.ShowQuestion(questionId))
-            { Fail(presenter.LastError); starting = false; presenter.ExitOverview(); yield break; }
+            { Fail(presenter.LastError); starting = false; presenter.ExitOverview(); QuizLoadingOverlay.Hide(); yield break; }
             inputGate = presenter.canvas.GetComponent<CanvasGroup>();
             if (inputGate == null) inputGate = presenter.canvas.gameObject.AddComponent<CanvasGroup>();
             SetInput(false);
             // Prepare the overview under the CG blackout. Do not allow the skip click to answer.
             while (FindAnyObjectByType<CgTransitionPlayer>() != null) yield return null;
+            QuizLoadingOverlay.SetProgress(.94f, "Preparing answer choices...");
             yield return null;
             yield return new WaitForSecondsRealtime(.2f);
+            yield return QuizLoadingOverlay.Reveal();
             IsQuestionActive = true; starting = false; submitting = false; LastSelectedOption = null;
             SetInput(true); routine = null;
             QuestionPresented?.Invoke();
@@ -126,11 +132,12 @@ namespace HMProtection.Quiz
             routine = null;
         }
         void SetInput(bool enabled) { if (inputGate != null) { inputGate.interactable = enabled; inputGate.blocksRaycasts = enabled; } }
-        void Fail(string message) { LastError = message; Debug.LogError("[OfficeFireChoice] " + message, this); }
+        void Fail(string message) { LastError = message; QuizLoadingOverlay.Hide(); Debug.LogError("[OfficeFireChoice] " + message, this); }
         public void CancelQuestion()
         {
             bool cancellable = starting || IsQuestionActive || submitting;
             if (routine != null) StopCoroutine(routine);
+            if (cancellable) QuizLoadingOverlay.Hide();
             if (presenter != null && cancellable) presenter.ExitOverview();
             SetInput(true); starting = IsQuestionActive = submitting = false; routine = null;
             if (cancellable) QuestionCancelled?.Invoke();
