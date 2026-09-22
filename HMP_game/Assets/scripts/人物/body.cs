@@ -121,6 +121,25 @@ public class body : MonoBehaviour
         Cursor.visible = !shouldLock;
     }
 
+    // 光标锁的持有者负责释放：body 锁上的光标，必须在 body 消失时交还。
+    // 必须做的原因（2026-09-22 实测）：关卡场景卸载时 body 被销毁，而 Cursor 是**全局状态**，
+    // Locked + 不可见 会留给下一个场景。主菜单（初始界面）是纯 UI 场景，没人会解锁
+    // ——表现为「第一关三题答完 → 点 MAIN MENU 回到主界面，鼠标不见了」。
+    // 这条路径上的上游是谁锁的并不重要：结算面板 TrainingSettlementView.Dismiss() 会把光标还原成
+    // 「弹出结算前」的状态（游戏里就是 Locked），答题/讲解视图也各自存档还原，
+    // 只要关卡场景一卸载，光标最终都停在这个全局状态上；所以修在持有者这一层才覆盖全部出口。
+    //
+    // 只做 OnDestroy、不做 OnDisable：结算/讲解/答题会把 body 临时 enabled=false，
+    // 那条路径有各自的 Cursor 存档与还原，body 不参与，避免两套逻辑互相打架。
+    // 也只释放自己锁上的（cursorLocked）：没锁过就别去动别人的光标状态。
+    private void OnDestroy()
+    {
+        if (!cursorLocked) return;
+        cursorLocked = false;
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+    }
+
     // 鼠标视角：水平转身转 body 自身（yaw），垂直俯仰只转相机（pitch）
     private void HandleLook()
     {
