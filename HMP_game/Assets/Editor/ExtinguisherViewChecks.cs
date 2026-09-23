@@ -42,47 +42,68 @@ public static class ExtinguisherViewChecks
             var prop=(GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Props/Models/SM_Extinguisher_01.fbx"),scene);
             var rig=prop.AddComponent<ExtinguisherCarryRig>();rig.Initialize();
             float minHandle=1,maxHandle=0;
-            foreach(float pitch in new[]{-80f,-60f,-30f,0f,20f,35f,50f,70f,80f})
+            foreach(float pitch in new[]{-80f,-60f,-30f,0f,20f,35f,50f,70f,80f,85f})
             {
                 playerBody.SetPitch(pitch);Call(arms,"LateUpdate");
                 Vector3 genericPosition=handRoot.transform.position;
                 Quaternion genericRotation=handRoot.transform.rotation;
+                Vector3 leftArmPosition=hands.WristLeft.parent.localPosition, rightArmPosition=hands.WristRight.parent.localPosition;
+                Vector3 leftWristPosition=hands.WristLeft.localPosition;
                 arms.PrepareExtinguisherPose(camera);
                 arms.TryGetGripPoint(true,out Vector3 right);arms.TryGetGripPoint(false,out Vector3 left);
-                rig.ApplyPose(right,left,camera.transform.forward,bodyObject.transform.forward);
+                rig.ApplyPose(right,camera.transform.forward,bodyObject.transform.forward);
                 Vector3 correction=rig.GetViewCorrection(camera);
                 arms.ShiftHeldPose(correction);right+=correction;left+=correction;
-                rig.ApplyPose(right,left,camera.transform.forward,bodyObject.transform.forward);
+                rig.ApplyPose(right,camera.transform.forward,bodyObject.transform.forward);
+                arms.AlignExtinguisherSupport(camera,rig.SupportPosition);
+                arms.TryGetGripPoint(false,out left);
                 float handleY=camera.WorldToViewportPoint(rig.HandlePosition).y;
 
-                minHandle=Mathf.Min(minHandle,handleY);maxHandle=Mathf.Max(maxHandle,handleY);
+                bool workingPitch=pitch>=-25f && pitch<=85f;
+                if(workingPitch){minHandle=Mathf.Min(minHandle,handleY);maxHandle=Mathf.Max(maxHandle,handleY);}
                 float minDepth=float.PositiveInfinity;float top=0;
-                if(Vector3.Distance(rig.HandlePosition,right)>.001f || Vector3.Distance(rig.NozzleGripPosition,left)>.001f)
+                if(Vector3.Distance(rig.HandlePosition,right)>.001f || Vector3.Distance(rig.SupportPosition,left)>.001f)
                     throw new InvalidOperationException("grip contact lost");
                 foreach(var renderer in handRoot.GetComponentsInChildren<SkinnedMeshRenderer>())
                 {
                     var baked=new Mesh();renderer.BakeMesh(baked, true);
+                    float lowestVisibleY=float.PositiveInfinity;
                     foreach(Vector3 v in baked.vertices)
                     {
                         Vector3 view=camera.WorldToViewportPoint(renderer.transform.TransformPoint(v));
-                        minDepth=Mathf.Min(minDepth,view.z);top=Mathf.Max(top,view.y);
+                        if(view.z>0 && view.x>=0 && view.x<=1 && view.y>=0 && view.y<=1)
+                            minDepth=Mathf.Min(minDepth,view.z);
+                        if(view.z>camera.nearClipPlane){top=Mathf.Max(top,view.y);lowestVisibleY=Mathf.Min(lowestVisibleY,view.y);}
                     }
                     UnityEngine.Object.DestroyImmediate(baked);
+                    if(workingPitch && lowestVisibleY>0f)throw new InvalidOperationException("forearm ends inside viewport: " + renderer.name + " pitch=" + pitch + " bottom=" + lowestVisibleY + " grip=" + camera.WorldToViewportPoint(left));
                 }
-                bool ok=handleY>=.24f && handleY<=.38f && minDepth>=camera.nearClipPlane+.02f && top<.52f;
+                Vector3 rightView=camera.WorldToViewportPoint(right),leftView=camera.WorldToViewportPoint(left);
+                hands.TryGetPalmFrame(false,out _,out var leftAlong,out var leftNormal);
+                float wristBend=Vector3.Angle(hands.WristLeft.position-hands.WristLeft.parent.position,leftAlong);
+                if(workingPitch && wristBend>55f)throw new InvalidOperationException("left wrist over-bent: " + wristBend);
+                if(Vector3.Dot((rig.OutletPosition-rig.NozzleGripPosition).normalized,camera.transform.forward)<.999f)throw new InvalidOperationException("nozzle not parallel to gaze");
+                bool ok=minDepth>=camera.nearClipPlane+.02f;
+                if(workingPitch)ok &= handleY>=.18f && handleY<=.28f && top<.55f
+                    && rightView.x>.62f && leftView.x>.45f && leftView.x<.8f && leftView.y>.12f && leftView.y<.4f && leftView.z>rightView.z+.10f;
+                if(pitch<=-60f)ok &= handleY<0f; // Looking up must not lift the bottle into the face.
                 if(!ok)failures++;
-                report.AppendLine($"pitch={pitch}: handleY={handleY:F4}, armMinDepth={minDepth:F4}, armTop={top:F4} {(ok?"PASS":"FAIL")}");
+                report.AppendLine($"pitch={pitch}: handleY={handleY:F4}, armMinDepth={minDepth:F4}, armTop={top:F4}, right={rightView}, left={leftView}, wristBend={wristBend:F1} {(ok?"PASS":"FAIL")}");
                 Vector3 heldPosition=prop.transform.position;
                 Call(arms,"LateUpdate");arms.PrepareExtinguisherPose(camera);
                 arms.TryGetGripPoint(true,out right);arms.TryGetGripPoint(false,out left);
-                rig.ApplyPose(right,left,camera.transform.forward,bodyObject.transform.forward);
+                rig.ApplyPose(right,camera.transform.forward,bodyObject.transform.forward);
                 correction=rig.GetViewCorrection(camera);arms.ShiftHeldPose(correction);
-                rig.ApplyPose(right+correction,left+correction,camera.transform.forward,bodyObject.transform.forward);
+                rig.ApplyPose(right+correction,camera.transform.forward,bodyObject.transform.forward);
+                arms.AlignExtinguisherSupport(camera,rig.SupportPosition);
                 if(Vector3.Distance(prop.transform.position,heldPosition)>.001f)
                     throw new InvalidOperationException("held pose accumulates between frames");
                 rig.Restore();Call(arms,"LateUpdate");
                 if(Vector3.Distance(handRoot.transform.position,genericPosition)>.001f || Quaternion.Angle(handRoot.transform.rotation,genericRotation)>.01f)
                     throw new InvalidOperationException("generic arms pose not restored after drop");
+                if(Vector3.Distance(hands.WristLeft.parent.localPosition,leftArmPosition)>.0001f || Vector3.Distance(hands.WristRight.parent.localPosition,rightArmPosition)>.0001f)
+                    throw new InvalidOperationException("forearm position not restored after drop");
+                if(Vector3.Distance(hands.WristLeft.localPosition,leftWristPosition)>.0001f)throw new InvalidOperationException("wrist position not restored after drop");
             }
             if(maxHandle-minHandle>.06f){failures++;report.AppendLine("FAIL: pitch changes grip framing by more than 6% of screen height");}
             report.AppendLine($"{(failures==0?"PASS":"FAIL")}: real hand mesh, scene camera hierarchy, {failures} failures");

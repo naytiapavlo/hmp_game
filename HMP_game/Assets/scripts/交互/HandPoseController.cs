@@ -104,6 +104,59 @@ public class HandPoseController : MonoBehaviour
     private readonly Dictionary<Transform, Quaternion> defaultRots = new Dictionary<Transform, Quaternion>();
     private readonly Dictionary<Transform, Quaternion> targetRots = new Dictionary<Transform, Quaternion>();
     private bool loggedWiring; // 只打一次接线日志，避免拿放刷屏
+    private readonly Dictionary<Transform, Vector3> heldArmPositions = new Dictionary<Transform, Vector3>();
+    private readonly Dictionary<Transform, Vector3> heldWristPositions = new Dictionary<Transform, Vector3>();
+
+    // View-model placement moves each complete forearm, retaining its length and finger pose.
+    // Restore before generic poses and before each frame so offsets cannot accumulate.
+    public void ResetHeldArmPlacement()
+    {
+        if (heldArmPositions.Count == 0) return;
+        foreach (var pair in heldArmPositions)
+        {
+            if (pair.Key == null) continue;
+            pair.Key.localPosition = pair.Value;
+            if (targetRots.TryGetValue(pair.Key, out var rotation)) pair.Key.localRotation = rotation;
+        }
+        heldArmPositions.Clear();
+        foreach (var pair in heldWristPositions)
+            if (pair.Key != null) pair.Key.localPosition = pair.Value;
+        heldWristPositions.Clear();
+        if (WristLeft != null && targetRots.TryGetValue(WristLeft, out var leftRotation)) WristLeft.localRotation = leftRotation;
+        if (WristRight != null && targetRots.TryGetValue(WristRight, out var rightRotation)) WristRight.localRotation = rightRotation;
+    }
+
+    public void PlaceExtinguisherHand(bool right, Vector3 grip, Vector3 forearmDirection,
+        Vector3 palmAlong, Vector3 palmNormal, float alongOffset, float normalOffset)
+    {
+        var wrist = right ? WristRight : WristLeft;
+        var arm = wrist != null ? wrist.parent : null;
+        if (arm == null || !arm.name.StartsWith("Forearm")) return;
+        if (!heldArmPositions.ContainsKey(arm)) heldArmPositions.Add(arm, arm.localPosition);
+        // Solve in the parent's space: the authored hand root has non-uniform scale.
+        var current = arm.parent.InverseTransformVector(wrist.position - arm.position);
+        var desired = arm.parent.InverseTransformVector(forearmDirection);
+        arm.localRotation = Quaternion.FromToRotation(current, desired) * arm.localRotation;
+        if (!TryGetPalmFrame(right, out _, out var along, out var normal)) return;
+        var rollFrom = Vector3.ProjectOnPlane(arm.parent.InverseTransformVector(normal), desired);
+        var rollTo = Vector3.ProjectOnPlane(arm.parent.InverseTransformVector(palmNormal), desired);
+        arm.localRotation = Quaternion.AngleAxis(Vector3.SignedAngle(rollFrom, rollTo, desired), desired) * arm.localRotation;
+        TryGetPalmFrame(right, out _, out along, out normal);
+        wrist.rotation = Quaternion.LookRotation(palmAlong, palmNormal)
+            * Quaternion.Inverse(Quaternion.LookRotation(along, normal)) * wrist.rotation;
+        TryGetPalmFrame(right, out var position, out along, out normal);
+        arm.position += grip - (position + along * alongOffset + normal * normalOffset);
+        if (!right)
+        {
+            // Lengthen the visible forearm from its elbow while keeping wrist and palm
+            // on the tube. The same skinned bones interpolate the extra length naturally.
+            if (!heldWristPositions.ContainsKey(wrist)) heldWristPositions.Add(wrist, wrist.localPosition);
+            Vector3 extension = forearmDirection.normalized * .09f;
+            Vector3 heldWristWorld = wrist.position;
+            arm.position -= extension;
+            wrist.position = heldWristWorld;
+        }
+    }
 
     private void Awake()
     {
@@ -121,6 +174,7 @@ public class HandPoseController : MonoBehaviour
     // 设置某只手的姿态，并立即写入骨骼（与编辑器测试同一路径）
     public void SetPose(Hand hand, Pose pose)
     {
+        ResetHeldArmPlacement();
         if (!loggedWiring)
         {
             loggedWiring = true;
@@ -248,6 +302,7 @@ public class HandPoseController : MonoBehaviour
         float sign = isRight && mirrorRightHand ? -1f : 1f;
         int joint = JointIndex(boneName);
         float angle = joint == 1 ? v.x : joint == 2 ? v.y : v.z;
+        if (!isThumb) angle -= 30f; // Close the fingers around the handle and nozzle.
         return Quaternion.Euler(sign * angle, 0f, 0f);
     }
 

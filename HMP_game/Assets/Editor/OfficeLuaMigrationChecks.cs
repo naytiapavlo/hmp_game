@@ -234,10 +234,44 @@ public static class OfficeLuaMigrationChecks
         settlement.MenuButton.onClick.Invoke();
         negativeFireController.Model.StateChanged -= captureNegativeFire;
         yield return Until(() => SceneManager.GetActiveScene().path == MenuScene);
+        yield return Delay(.5f); // Include outgoing scene teardown and incoming menu Start.
+        Need(Cursor.lockState == CursorLockMode.None && Cursor.visible,
+            "Returning to Main Menu leaves the cursor locked/hidden: " + Cursor.lockState + ", visible=" + Cursor.visible);
+        results.Add("PASS returning to Main Menu leaves the pointer unlocked and visible after scene teardown");
         Need(!exitLua.IsRunning, "Main-menu exit left the migrated Lua VM running.");
         Fail(exitClient, "session.info", "{}", "session_stopped");
         exitClient.Dispose();
         results.Add("PASS the real settlement Main Menu button releases the entity scope, component API, and Lua VM before returning to the menu");
+        yield return ClickReturnedMenuWithMouse();
+    }
+
+    static IEnumerator ClickReturnedMenuWithMouse()
+    {
+        var menu = UnityEngine.Object.FindAnyObjectByType<MainMenuView>();
+        Need(menu != null, "Returned menu view is missing.");
+        var button = menu.GetComponentsInChildren<UnityEngine.UI.Button>(true).Single(b => b.name == "StartTraining");
+        Canvas.ForceUpdateCanvases();
+        var canvas = button.GetComponentInParent<Canvas>();
+        var camera = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
+        var rect = (RectTransform)button.transform;
+        var position = RectTransformUtility.WorldToScreenPoint(camera, rect.TransformPoint(rect.rect.center));
+        var previous = Mouse.current;
+        var mouse = InputSystem.AddDevice<Mouse>();
+        mouse.MakeCurrent();
+        try
+        {
+            InputSystem.QueueStateEvent(mouse, new MouseState { position = position });
+            yield return Delay(.15f);
+            InputSystem.QueueStateEvent(mouse, new MouseState { position = position }.WithButton(MouseButton.Left));
+            yield return Delay(.15f);
+            InputSystem.QueueStateEvent(mouse, new MouseState { position = position });
+            yield return Delay(.3f);
+            var selection = UnityEngine.Object.FindAnyObjectByType<SceneSelectUI>();
+            Need(selection != null && selection.windowContent != null && selection.windowContent.activeInHierarchy,
+                "Pointer click on returned menu StartTraining did not open scene selection.");
+            results.Add("PASS a real Input System mouse click on the returned menu opens scene selection");
+        }
+        finally { InputSystem.RemoveDevice(mouse); previous?.MakeCurrent(); }
     }
 
     static IEnumerator EnterFromMainMenu()
@@ -273,9 +307,27 @@ public static class OfficeLuaMigrationChecks
             Need(question != null, "Lua did not present question " + (index + 1) + ".");
             var choice = Array.FindIndex(question.options, option => option.id == question.correctOptionId);
             Need(choice >= 0, "Question " + question.id + " lacks a selectable correct option.");
+            if (index == 2)
+            {
+                float before = owner.timer.RemainingSeconds;
+                yield return Delay(.6f);
+                Need(owner.timer.RemainingSeconds < before - .2f, "Third question clock froze with the extinguished fire.");
+                runner.SetPaused(true);
+                before = owner.timer.RemainingSeconds;
+                yield return Delay(.35f);
+                Need(Mathf.Abs(owner.timer.RemainingSeconds - before) < .05f, "Question clock must stop during actual pause.");
+                runner.SetPaused(false);
+                results.Add("PASS third question counts down with frozen fire and respects actual pause");
+            }
             var option = question.options[choice];
             flow.presenter.Bubbles[choice].button.onClick.Invoke();
             yield return Until(() => !flow.IsQuestionActive && owner.ArmedOption == option.id);
+            if (index == 2)
+            {
+                float before = owner.timer.RemainingSeconds;
+                yield return Delay(.6f);
+                Need(owner.timer.RemainingSeconds < before - .2f, "Third question clock stopped after returning to first-person interaction.");
+            }
             yield return SubmitWithKeyboardE(bridge, option.id);
             yield return Until(() => owner.feedback.IsShowing && owner.Completed);
             Need(runner.Score.AskedCount == index + 1 && runner.Score.Answers[index].correct,
@@ -360,7 +412,19 @@ public static class OfficeLuaMigrationChecks
         bridge.player.transform.position = new Vector3(position.x, bridge.player.transform.position.y, position.z);
         controller.enabled = true;
         yield return WalkIntoRange(bridge.player, controller, collider, optionId);
-        var direction = collider.bounds.center - bridge.player.PlayerCamera.transform.position;
+        var aimPoint = collider.bounds.center;
+        if (targetId == "unplug_strip")
+        {
+            var choiceTarget = entity.GetComponent<OfficeChoiceTarget>();
+            Need(choiceTarget != null && choiceTarget.visualTarget != null, "Power-strip interaction must reference the visible fire prop.");
+            var visible = choiceTarget.visualTarget.GetComponentsInChildren<Renderer>().Where(r => r.enabled).ToArray();
+            Need(visible.Length > 0, "Power-strip visual is missing.");
+            var bounds = visible[0].bounds;
+            foreach (var renderer in visible.Skip(1)) bounds.Encapsulate(renderer.bounds);
+            aimPoint = bounds.center;
+            Need(collider.bounds.Contains(aimPoint), "Interaction collider detached from visible power strip.");
+        }
+        var direction = aimPoint - bridge.player.PlayerCamera.transform.position;
         bridge.player.transform.rotation = Quaternion.Euler(0f, Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg, 0f);
         bridge.player.SetPitch(-Mathf.Atan2(direction.y, new Vector2(direction.x, direction.z).magnitude) * Mathf.Rad2Deg);
         Physics.SyncTransforms();
@@ -368,7 +432,9 @@ public static class OfficeLuaMigrationChecks
         var raycast = Physics.Raycast(bridge.player.PlayerCamera.transform.position, bridge.player.PlayerCamera.transform.forward, out var hit, 2.8f);
         EntityHandle hitEntity = default;
         var mapped = raycast && bridge.Scope.Registry.TryResolveHit(hit.collider, out hitEntity, out _);
-        Need(raycast && mapped && hitEntity.Equals(target), "E ray did not resolve the expected entity target " + optionId + " (" + targetId + ").");
+        Need(raycast && mapped && hitEntity.Equals(target), "E ray did not resolve the expected entity target " + optionId + " (" + targetId
+            + "). Hit=" + (raycast ? hit.collider.name : "none") + "; camera=" + bridge.player.PlayerCamera.transform.position
+            + "; aim=" + aimPoint + "; route=" + position + "; hitDistance=" + (raycast ? hit.distance : -1f));
         InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.E));
         yield return Delay(.25f);
         InputSystem.QueueStateEvent(keyboard, new KeyboardState());

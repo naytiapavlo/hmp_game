@@ -1,0 +1,9 @@
+FAIL
+PASS main menu → office card → Start Training follows serialized production entry events
+PASS serialized menu selection loads the packaged initial-fire scene with Lua enabled, legacy stages disabled, and a ready entity scope
+PASS a non-owner API client cannot prepare or advance the Lua-owned flow and does not disturb its owner
+PASS Lua-driven lesson pause and resume retain the session control contract
+THIRD timer before=45 after=45
+System.InvalidOperationException: Third question countdown is frozen while fire is out.
+  at OfficeLuaMigrationChecks+<RunCorrectLesson>d__21.MoveNext () [0x004e6] in C:\Users\19677\Desktop\工作\first-level-qa\Assets\Editor\OfficeLuaMigrationChecks.cs:293
+  at OfficeLuaMigrationChecks.Tick () [0x000f1] in C:\Users\19677\Desktop\工作\first-level-qa\Assets\Editor\OfficeLuaMigrationChecks.cs:118

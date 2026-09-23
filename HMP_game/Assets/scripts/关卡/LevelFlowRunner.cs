@@ -868,7 +868,10 @@ namespace HMProtection.Core
         {
             bool value = IsPaused || holdFrozen;
             freezeLease?.Dispose(); freezeLease = null;
-            if (value && entityBindings != null && entityBindings.sessionHost != null)
+            // A stage's freezeFire flag freezes only its fire/stage timer. It must not stop
+            // the independent question clock (e.g. the cooled-strip question). Actual pause
+            // still freezes the whole session, including questions and input.
+            if (IsPaused && entityBindings != null && entityBindings.sessionHost != null)
                 freezeLease = entityBindings.sessionHost.Acquire(this, HMProtection.Sessions.ControlMask.Simulation);
             if (IsFrozen == value) return;
             IsFrozen = value;

@@ -1,27 +1,29 @@
 using UnityEngine;
 
-/// <summary>Right hand carries the upright cylinder; left hand aims the independent nozzle.
-/// Deforms a runtime copy of the existing hose mesh. Never edits the imported mesh or hand rig.</summary>
+/// <summary>Right hand carries the upright cylinder; left hand supports a rigid straight tube.
+/// The tube axis follows gaze; the supporting hand follows the tube, not the other way around.</summary>
 [DisallowMultipleComponent]
 [DefaultExecutionOrder(10000)]
 public sealed class ExtinguisherCarryRig : MonoBehaviour
 {
-    private const int Sections = 32;
+    private const float TubeLength = .40f;
+    private const float TubeRadius = .012f;
     private PickupItem pickup;
     private Transform nozzle;
     private Transform outlet;
     private MeshFilter hose;
-    private Mesh originalMesh, bentMesh;
+    private Mesh originalMesh, rigidMesh;
     private Vector3 nozzlePosition, nozzleScale;
     private Quaternion nozzleRotation;
     private Vector3 handleGrip, nozzleGrip, outletAxis, hoseEndInNozzle;
-    private Vector3[] restVertices, vertices, centers;
-    private float[] fractions;
+    private Vector3 tubeStart, hoseRestPosition, hoseRestScale;
+    private Quaternion hoseRestRotation;
     private bool ready, holding;
     private MeshFilter[] geometry;
 
     public Vector3 HandlePosition => transform.TransformPoint(handleGrip);
     public Vector3 NozzleGripPosition => nozzle != null ? nozzle.TransformPoint(nozzleGrip) : transform.position;
+    public Vector3 SupportPosition => hose != null ? hose.transform.TransformPoint(new Vector3(0f,0f,.27f)) : transform.position;
     public Vector3 OutletPosition => outlet != null ? outlet.position : NozzleGripPosition;
 
     private void Awake() { pickup = GetComponent<PickupItem>(); }
@@ -49,34 +51,37 @@ public sealed class ExtinguisherCarryRig : MonoBehaviour
         if (outletAxis.sqrMagnitude < .5f) return false;
         nozzlePosition = nozzle.localPosition; nozzleRotation = nozzle.localRotation; nozzleScale = nozzle.localScale;
         originalMesh = hose.sharedMesh;
-        Vector3[] source = originalMesh.vertices;
-        restVertices = new Vector3[source.Length]; vertices = new Vector3[source.Length]; fractions = new float[source.Length];
-        float lo = float.PositiveInfinity, hi = float.NegativeInfinity;
-        for (int i = 0; i < source.Length; i++)
+        // Author a rigid straight tube once; aiming changes transforms, never its vertices.
+        // Seat the straight tube inside the front of the real handle. The highest
+        // vertices of the authored Hose are above/in front of its outlet, so using
+        // them directly leaves a visible floating end after replacing that mesh.
+        MeshFilter handleMesh = handle.GetComponent<MeshFilter>();
+        if (handleMesh == null || handleMesh.sharedMesh == null || !handleMesh.sharedMesh.isReadable)
         {
-            restVertices[i] = transform.InverseTransformPoint(hose.transform.TransformPoint(source[i]));
-            lo = Mathf.Min(lo, restVertices[i].y); hi = Mathf.Max(hi, restVertices[i].y);
+            Debug.LogError("[ExtinguisherCarryRig] CarryHandle mesh needs Read/Write enabled.", this);
+            return false;
         }
-        if (hi - lo < .01f) return false;
-        centers = new Vector3[Sections + 1];
-        for (int s = 0; s <= Sections; s++)
+        // The FBX child is rotated relative to the bottle: mesh-local +Z is not
+        // bottle-forward. Measure vertices in bottle coordinates instead.
+        float frontZ = float.NegativeInfinity;
+        foreach (var vertex in handleMesh.sharedMesh.vertices)
+            frontZ = Mathf.Max(frontZ, transform.InverseTransformPoint(handle.TransformPoint(vertex)).z);
+        Vector3 low = Vector3.one * float.PositiveInfinity;
+        Vector3 high = Vector3.one * float.NegativeInfinity;
+        foreach (var vertex in handleMesh.sharedMesh.vertices)
         {
-            float y = Mathf.Lerp(hi, lo, s / (float)Sections);
-            float nearest = float.PositiveInfinity; Vector3 closest = Vector3.zero;
-            Vector3 min = Vector3.one * float.PositiveInfinity, max = Vector3.one * float.NegativeInfinity;
-            int count = 0;
-            foreach (Vector3 v in restVertices)
-            {
-                float d = Mathf.Abs(v.y - y);
-                if (d < nearest) { nearest = d; closest = v; }
-                if (d <= (hi - lo) / Sections * .65f) { min = Vector3.Min(min, v); max = Vector3.Max(max, v); count++; }
-            }
-            centers[s] = count > 0 ? (min + max) * .5f : closest;
-            centers[s].y = y;
+            Vector3 point = transform.InverseTransformPoint(handle.TransformPoint(vertex));
+            if (point.z < frontZ - .006f) continue;
+            low = Vector3.Min(low, point);
+            high = Vector3.Max(high, point);
         }
-        for (int i = 0; i < source.Length; i++) fractions[i] = Mathf.Clamp01((hi - restVertices[i].y) / (hi - lo));
-        hoseEndInNozzle = nozzle.InverseTransformPoint(transform.TransformPoint(centers[Sections]));
-        bentMesh = Instantiate(originalMesh); bentMesh.name = "Hose (runtime carry)"; bentMesh.MarkDynamic();
+        tubeStart = (low + high) * .5f;
+        tubeStart.z -= .004f; // Embed the first four millimetres in the metal fitting.
+        hoseEndInNozzle = nozzleGrip - outletAxis * Vector3.Distance(nozzle.InverseTransformPoint(outlet.position), nozzleGrip);
+        hoseRestPosition = hose.transform.localPosition;
+        hoseRestRotation = hose.transform.localRotation;
+        hoseRestScale = hose.transform.localScale;
+        rigidMesh = BuildRigidTube(TubeLength, TubeRadius);
         geometry = GetComponentsInChildren<MeshFilter>();
         ready = true;
         return true;
@@ -103,7 +108,7 @@ public sealed class ExtinguisherCarryRig : MonoBehaviour
         if (arms == null || !arms.TryGetGripPoint(true, out Vector3 right)
                          || !arms.TryGetGripPoint(false, out Vector3 left)) return;
         Vector3 aim = view != null ? view.forward : actor.transform.forward;
-        if (!ApplyPose(right, left, aim, actor.transform.forward)) return;
+        if (!ApplyPose(right, aim, actor.transform.forward)) return;
         if (camera == null) return;
         Vector3 correction = GetViewCorrection(camera);
         if (correction.sqrMagnitude > 1e-8f)
@@ -111,38 +116,55 @@ public sealed class ExtinguisherCarryRig : MonoBehaviour
             // Move hands with the prop, never break either grip to clear the camera.
             // ArmsPitchFollow resets its base pose before us next frame, so no drift accumulates.
             arms.ShiftHeldPose(correction);
-            ApplyPose(right + correction, left + correction, aim, actor.transform.forward);
+            ApplyPose(right + correction, aim, actor.transform.forward);
         }
+        arms.AlignExtinguisherSupport(camera, SupportPosition);
     }
 
-    /// <summary>Shared runtime/QA seam. Both contact points are world coordinates.
-    /// Cylinder yaw follows the body, with no pitch or roll; nozzle follows aim.</summary>
-    public bool ApplyPose(Vector3 right, Vector3 left, Vector3 aim, Vector3 bodyForward)
+    /// <summary>Shared runtime/QA seam. The right contact positions the cylinder; the rigid tube determines the left contact.
+    /// Cylinder yaw follows the body and leans back slightly at steep downward gaze; nozzle follows aim.</summary>
+    public bool ApplyPose(Vector3 right, Vector3 aim, Vector3 bodyForward)
     {
         if (!Initialize()) return false;
         bodyForward = Vector3.ProjectOnPlane(bodyForward, Vector3.up);
         if (bodyForward.sqrMagnitude < 1e-6f) bodyForward = Vector3.forward;
-        transform.rotation = Quaternion.LookRotation(bodyForward.normalized, Vector3.up);
+        // At deep downward gaze, lean the bottle back from the straight tube's path.
+        // The mount stays on the real handle and the bottle never lies sideways.
+        float downPitch = -Mathf.Asin(Mathf.Clamp(aim.normalized.y, -1f, 1f)) * Mathf.Rad2Deg;
+        float bottleLean = 25f * Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((downPitch - 45f) / 40f));
+        transform.rotation = Quaternion.LookRotation(bodyForward.normalized, Vector3.up)
+            * Quaternion.Euler(bottleLean, 0f, 0f);
         transform.position += right - HandlePosition;
         if (aim.sqrMagnitude < 1e-6f) aim = bodyForward;
         Vector3 aimUp = Mathf.Abs(Vector3.Dot(aim.normalized, Vector3.up)) > .99f ? transform.forward : Vector3.up;
+        // Both NozzleBody and the entire black tube are rigid.
         nozzle.rotation = Quaternion.LookRotation(aim.normalized, aimUp) * Quaternion.FromToRotation(outletAxis, Vector3.forward);
-        nozzle.position += left - NozzleGripPosition;
-        hose.sharedMesh = bentMesh;
-        BendHose();
+        Vector3 start = transform.TransformPoint(tubeStart);
+        Vector3 end = start + aim.normalized * TubeLength;
+        nozzle.position += end - nozzle.TransformPoint(hoseEndInNozzle);
+        hose.sharedMesh = rigidMesh;
+        hose.transform.SetPositionAndRotation(start, Quaternion.LookRotation(aim.normalized, aimUp));
+        hose.transform.localScale = Vector3.one;
+        Vector3 scale = hose.transform.lossyScale;
+        hose.transform.localScale = new Vector3(1f/scale.x, 1f/scale.y, 1f/scale.z);
         holding = true;
         return true;
     }
 
-    /// <summary>Frame the handle near viewport y=.30, with geometry below y=.48 and beyond the near plane.
-    /// Evaluate oriented mesh bounds, including the deformed hose, rather than only the handle.
+    /// <summary>Within the working pitch range, frame the handle near viewport y=.22,
+    /// keeping geometry beyond the near plane through the full downward pitch range. Looking up releases framing.
+    /// Evaluate oriented mesh bounds, including the rigid tube, rather than only the handle.
     /// The returned translation must be applied to BOTH hands and prop in the same frame.</summary>
     public Vector3 GetViewCorrection(Camera camera)
     {
         if (!ready || camera == null) return Vector3.zero;
+        float pitch = -Mathf.Asin(Mathf.Clamp(camera.transform.forward.y, -1f, 1f)) * Mathf.Rad2Deg;
+        // Looking far above the working area must not drag the hands to eye height.
+        float framingWeight = 1f - Mathf.SmoothStep(0f, 1f,
+            (-25f - pitch) / 15f);
+        if (framingWeight <= 0f) return Vector3.zero;
         float halfFovTan = Mathf.Tan(camera.fieldOfView * Mathf.Deg2Rad * .5f);
-        float slope = (2f * .48f - 1f) * halfFovTan;
-        float minDepth = float.PositiveInfinity, maxPlane = float.NegativeInfinity;
+        float minDepth = float.PositiveInfinity;
         foreach (MeshFilter filter in geometry)
         {
             if (filter == null || filter.sharedMesh == null) continue;
@@ -153,26 +175,22 @@ public sealed class ExtinguisherCarryRig : MonoBehaviour
                     new Vector3((corner&1)==0?-1:1, (corner&2)==0?-1:1, (corner&4)==0?-1:1));
                 p = ViewPoint(camera, filter.transform.TransformPoint(p));
                 minDepth = Mathf.Min(minDepth, p.z);
-                maxPlane = Mathf.Max(maxPlane, p.y - slope * p.z);
             }
         }
         // Include a palm/finger envelope, since model bounds alone omit the gripping hands.
         for (int hand = 0; hand < 2; hand++)
         {
-            Vector3 p = ViewPoint(camera, hand == 0 ? HandlePosition : NozzleGripPosition);
+            Vector3 p = ViewPoint(camera, hand == 0 ? HandlePosition : SupportPosition);
             minDepth = Mathf.Min(minDepth, p.z - .10f);
             // Height comes from actual geometry; a 10cm phantom palm above the left grip
             // previously pushed the right hand and bottle off-screen.
         }
         float forward = Mathf.Max(0f, Mathf.Max(.45f, camera.nearClipPlane + .10f) - minDepth);
         Vector3 handle = ViewPoint(camera, HandlePosition);
-        float targetSlope = (2f * .30f - 1f) * halfFovTan;
-        // If the upright bottle projects above the framing limit at steep pitch, move the
-        // complete pose farther forward instead of sacrificing visible handle height.
-        float framingDepth = (maxPlane + targetSlope * handle.z - handle.y) / (slope - targetSlope);
-        forward = Mathf.Max(forward, framingDepth);
+        float targetSlope = (2f * .22f - 1f) * halfFovTan;
+        // Keep the forearms connected to the bottom of the view; the authored pose sets height.
         float vertical = targetSlope * (handle.z + forward) - handle.y;
-        return camera.cameraToWorldMatrix.MultiplyVector(new Vector3(0f, vertical, -forward));
+        return camera.cameraToWorldMatrix.MultiplyVector(new Vector3(0f, vertical, -forward)) * framingWeight;
     }
 
     private static Vector3 ViewPoint(Camera camera, Vector3 world)
@@ -184,28 +202,31 @@ public sealed class ExtinguisherCarryRig : MonoBehaviour
         return p;
     }
 
-    private void BendHose()
+    private static Mesh BuildRigidTube(float length, float radius)
     {
-        Vector3 start = centers[0];
-        Vector3 end = transform.InverseTransformPoint(nozzle.TransformPoint(hoseEndInNozzle));
-        Vector3 startDir = (centers[1] - centers[0]).normalized;
-        Vector3 endDir = transform.InverseTransformDirection(nozzle.TransformDirection(outletAxis)).normalized;
-        float handle = Mathf.Clamp(Vector3.Distance(start, end) * .35f, .07f, .20f);
-        Vector3 a = start + startDir * handle;
-        Vector3 b = end - endDir * handle + Vector3.down * .06f;
-        for (int i = 0; i < vertices.Length; i++)
+        const int sides = 24;
+        var points = new Vector3[(sides + 1) * 2];
+        var normals = new Vector3[points.Length];
+        var uv = new Vector2[points.Length];
+        var triangles = new int[sides * 6];
+        for (int ring=0; ring<2; ring++) for (int i=0; i<=sides; i++)
         {
-            float t = fractions[i], u = 1f - t;
-            float sample = t * Sections; int s = Mathf.Min((int)sample, Sections - 1);
-            Vector3 restCenter = Vector3.Lerp(centers[s], centers[s + 1], sample - s);
-            Vector3 oldTangent = (centers[s + 1] - centers[s]).normalized;
-            Vector3 position = u*u*u*start + 3*u*u*t*a + 3*u*t*t*b + t*t*t*end;
-            Vector3 tangent = 3*u*u*(a-start) + 6*u*t*(b-a) + 3*t*t*(end-b);
-            Quaternion turn = Quaternion.FromToRotation(oldTangent, tangent.normalized);
-            Vector3 p = position + turn * (restVertices[i] - restCenter);
-            vertices[i] = hose.transform.InverseTransformPoint(transform.TransformPoint(p));
+            int n=ring*(sides+1)+i;
+            float angle=i*Mathf.PI*2f/sides;
+            normals[n]=new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0);
+            points[n]=normals[n]*radius + Vector3.forward*(ring*length);
+            uv[n]=new Vector2(i/(float)sides,ring);
         }
-        bentMesh.vertices = vertices; bentMesh.RecalculateNormals(); bentMesh.RecalculateBounds();
+        for(int i=0;i<sides;i++)
+        {
+            int j=i*6, next=i+sides+1;
+            triangles[j]=i;triangles[j+1]=i+1;triangles[j+2]=next;
+            triangles[j+3]=i+1;triangles[j+4]=next+1;triangles[j+5]=next;
+        }
+        var mesh=new Mesh { name="Rigid extinguisher tube (runtime)", vertices=points, normals=normals, uv=uv, triangles=triangles };
+        mesh.RecalculateBounds();
+        mesh.RecalculateTangents();
+        return mesh;
     }
 
     public void Restore()
@@ -213,15 +234,18 @@ public sealed class ExtinguisherCarryRig : MonoBehaviour
         if (!ready || !holding) return;
         nozzle.localPosition = nozzlePosition; nozzle.localRotation = nozzleRotation; nozzle.localScale = nozzleScale;
         hose.sharedMesh = originalMesh;
+        hose.transform.localPosition = hoseRestPosition;
+        hose.transform.localRotation = hoseRestRotation;
+        hose.transform.localScale = hoseRestScale;
         holding = false;
     }
     private void OnDisable() { Restore(); }
     private void OnDestroy()
     {
         Restore();
-        if (bentMesh != null)
+        if (rigidMesh != null)
         {
-            if (Application.isPlaying) Destroy(bentMesh); else DestroyImmediate(bentMesh);
+            if (Application.isPlaying) Destroy(rigidMesh); else DestroyImmediate(rigidMesh);
         }
     }
 }

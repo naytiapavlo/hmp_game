@@ -1597,6 +1597,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 41b23ab72b748e7489e76cd55ff0bda9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HMProtection.Core.StageTimer
+  sessionHost: {fileID: 0}
 --- !u!114 &134839635
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1627,6 +1628,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HMProtection.Core.LevelBootstrapper
   entityBindings: {fileID: 1780961242}
+  definition: {fileID: 0}
   defaultLevelId: level_1_initial_fire
   spawnAnchorPath: "\u951A\u70B9_\u51FA\u751F\u70B9"
   autoStart: 1
@@ -3878,6 +3880,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HMProtection.Quiz.SceneChoicePresenter
   viewController: {fileID: 345822705}
   entityBindings: {fileID: 1780961242}
+  catalogAsset: {fileID: 0}
   bubblePrefab: {fileID: 413652726094493523, guid: 50a29544ab745074589211d7c892ca2c, type: 3}
   canvas: {fileID: 1044844491}
   bubbleContainer: {fileID: 1044844488}
@@ -7027,19 +7030,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -2717719618051817479, guid: 65a8a8c2ce4602e47964aed807e4223e, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.48849997
+      value: 0.4737
       objectReference: {fileID: 0}
     - target: {fileID: -2717719618051817479, guid: 65a8a8c2ce4602e47964aed807e4223e, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0.8269999
+      value: 0.7413
       objectReference: {fileID: 0}
     - target: {fileID: -2717719618051817479, guid: 65a8a8c2ce4602e47964aed807e4223e, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.7071067
+      value: 0.9999957
       objectReference: {fileID: 0}
     - target: {fileID: -2717719618051817479, guid: 65a8a8c2ce4602e47964aed807e4223e, type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0.7071068
+      value: -0.002933532
       objectReference: {fileID: 0}
     - target: {fileID: -2717719618051817479, guid: 65a8a8c2ce4602e47964aed807e4223e, type: 3}
       propertyPath: m_LocalRotation.y
@@ -7051,7 +7054,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -2717719618051817479, guid: 65a8a8c2ce4602e47964aed807e4223e, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
+      value: -0.336
       objectReference: {fileID: 0}
     - target: {fileID: -2512960502990666787, guid: 65a8a8c2ce4602e47964aed807e4223e, type: 3}
       propertyPath: m_Enabled
@@ -15944,6 +15947,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51678d566f57e1246912046f7b1a0c21, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::body
+  sessionHost: {fileID: 0}
   controlEnabled: 1
   movementLocked: 0
   lookLocked: 0
@@ -18432,19 +18436,19 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 05fbbd3b3a466524b8ad26121750aca1, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 5.9734297
+      value: 3.0039783
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 05fbbd3b3a466524b8ad26121750aca1, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.7509999
+      value: 0.112
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 05fbbd3b3a466524b8ad26121750aca1, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 1.0909503
+      value: 1.075937
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 05fbbd3b3a466524b8ad26121750aca1, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 1
+      value: 0.6665056
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 05fbbd3b3a466524b8ad26121750aca1, type: 3}
       propertyPath: m_LocalRotation.x
@@ -18452,7 +18456,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 05fbbd3b3a466524b8ad26121750aca1, type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0
+      value: -0.7455001
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 05fbbd3b3a466524b8ad26121750aca1, type: 3}
       propertyPath: m_LocalRotation.z
@@ -18464,7 +18468,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 05fbbd3b3a466524b8ad26121750aca1, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
+      value: -96.404
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 05fbbd3b3a466524b8ad26121750aca1, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
@@ -18473,6 +18477,10 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: 05fbbd3b3a466524b8ad26121750aca1, type: 3}
       propertyPath: m_Name
       value: SM_Hazard_OverloadSocket_01_Aged
+      objectReference: {fileID: 0}
+    - target: {fileID: 7900885480577597238, guid: 05fbbd3b3a466524b8ad26121750aca1, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -0.0113
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -23061,6 +23069,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e0cfca5e1e5f42b428f103a799fb5752, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FireEffectController
+  sessionHost: {fileID: 0}
   prefabSmokeOnly: {fileID: 5441240567203670857, guid: f39dceb6f13f7034392ac73ddf5a6a61, type: 3}
   prefabSmall: {fileID: 6703705059783568620, guid: f200d06eb94ca9f4bba3e8c25bf797b2, type: 3}
   prefabMedium: {fileID: 384182732151093562, guid: 1bf73f8ce81c27c4ca70e81878ba7b7a, type: 3}
@@ -23076,7 +23085,7 @@ Transform:
   m_GameObject: {fileID: 1461051584}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 8.17637, y: 0.83299994, z: 4.1462107}
+  m_LocalPosition: {x: 5.2261496, y: 0.19400002, z: 4.1435776}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -26373,6 +26382,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HMProtection.EntityAdapters.OfficeEntityBindings
   host: {fileID: 1780961243}
+  sessionHost: {fileID: 0}
+  routeService: {fileID: 0}
+  presentationGate: {fileID: 0}
   player: {fileID: 842334984}
   actor: {fileID: 842334985}
   flow: {fileID: 345822707}

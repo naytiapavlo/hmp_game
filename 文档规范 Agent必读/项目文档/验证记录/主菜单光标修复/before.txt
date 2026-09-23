@@ -1,0 +1,13 @@
+FAIL
+PASS main menu → office card → Start Training follows serialized production entry events
+PASS serialized menu selection loads the packaged initial-fire scene with Lua enabled, legacy stages disabled, and a ready entity scope
+PASS a non-owner API client cannot prepare or advance the Lua-owned flow and does not disturb its owner
+PASS Lua-driven lesson pause and resume retain the session control contract
+PASS third question counts down with frozen fire and respects actual pause
+PASS all 11 Lua stages run in flow.json order; three real E interactions pass and reach a settled, completed success report
+PASS successful flow drives smoke, small-fire and extinguished states through the bound fire entity
+PASS the real settlement Retry button constructs a new Lua VM and rejects both the old API client and old entity token
+PASS incorrect E interaction, real timeout, and third-question E interaction reach the failed settlement with Large-fire feedback
+System.InvalidOperationException: Returning to Main Menu leaves the cursor locked/hidden: None, visible=False
+  at OfficeLuaMigrationChecks+<Check>d__19.MoveNext () [0x00c1b] in C:\Users\19677\Desktop\工作\first-level-qa\Assets\Editor\OfficeLuaMigrationChecks.cs:245
+  at OfficeLuaMigrationChecks.Tick () [0x000f1] in C:\Users\19677\Desktop\工作\first-level-qa\Assets\Editor\OfficeLuaMigrationChecks.cs:118

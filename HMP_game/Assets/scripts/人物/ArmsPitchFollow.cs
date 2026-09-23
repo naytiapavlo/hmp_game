@@ -55,15 +55,14 @@ public class ArmsPitchFollow : MonoBehaviour
     /// 那正是"两手相对位姿随俯仰变化 → 左手相对物体滑开"的根因。</summary>
     public float AppliedPitch(float viewPitch) => EffectivePitch(viewPitch) * followFactor;
 
-    /// <summary>按「单手抓握」的掌面口径算出某只手的抓握点（right=true 右手）。
-    /// 与 TrackAnchorsToHands 里 Anchor_RHand 的定位公式同源，左右手同一套距离——
-    /// 灭火器的「喷头 ↔ 左手掌」偏差诊断要用同样口径才有意义。返回 false = 手部骨骼不可用。</summary>
+    /// <summary>Extinguisher contacts in each palm frame. Left and right palm normals
+    /// have opposite handedness, so the nozzle uses the opposite normal offset.</summary>
     public bool TryGetGripPoint(bool right, out Vector3 point)
     {
         point = Vector3.zero;
         if (hands == null) return false;
         if (!hands.TryGetPalmFrame(right, out Vector3 wrist, out Vector3 along, out Vector3 normal)) return false;
-        point = wrist + along * gripAlongDist + normal * gripNormalDist;
+        point = wrist + along * gripAlongDist + normal * (right ? gripNormalDist : -gripNormalDist);
         return true;
     }
 
@@ -106,6 +105,7 @@ public class ArmsPitchFollow : MonoBehaviour
     private void LateUpdate()
     {
         if (Pivot == null || playerBody == null) return;
+        if (hands != null) hands.ResetHeldArmPlacement();
 
         // 死区外才跟随，减去死区宽度避免边界跳变（与 EffectivePitch 同一口径——持物对齐按它反算支点俯仰）
         float effective = EffectivePitch(playerBody.Pitch);
@@ -127,14 +127,34 @@ public class ArmsPitchFollow : MonoBehaviour
         TrackAnchorsToHands();
     }
 
+    public void AlignExtinguisherSupport(Camera camera, Vector3 grip)
+    {
+        if (camera == null || hands == null) return;
+        var frame = playerBody.transform.rotation * Quaternion.Euler(Mathf.Max(playerBody.Pitch, -25f), 0f, 0f);
+        hands.PlaceExtinguisherHand(false, grip,
+            frame * new Vector3(.9f, 2.3f, 1f), frame * new Vector3(0f, .5f, 1f),
+            frame * Vector3.right, gripAlongDist, -gripNormalDist);
+    }
+
     /// <summary>Use a camera-relative hand pose while aiming the extinguisher.
     /// Reset from the authored baseline each frame; generic hand/prop follow stays unchanged.</summary>
     public void PrepareExtinguisherPose(Camera camera)
     {
-        if (Pivot == null || camera == null) return;
+        if (Pivot == null || camera == null || hands == null) return;
+        hands.ResetHeldArmPlacement();
         Pivot.SetPositionAndRotation(camera.transform.position, camera.transform.rotation);
         transform.localPosition = armsBaseLocalPos + armTuckOffset;
         transform.localRotation = armsBaseLocalRot * Quaternion.Euler(-55f, 0f, 0f);
+        // Separate carrying and aiming hands. Limit their upward travel independently of gaze.
+        float pitch = Mathf.Max(playerBody.Pitch, -25f);
+        var frame = playerBody.transform.rotation * Quaternion.Euler(pitch, 0f, 0f);
+        var eye = camera.transform.position;
+        hands.PlaceExtinguisherHand(true, eye + frame * new Vector3(.30f, -.25f, .55f),
+            frame * new Vector3(-.22f, .22f, .65f), frame * new Vector3(-.25f, .55f, .25f),
+            frame * Vector3.right, gripAlongDist, gripNormalDist);
+        hands.PlaceExtinguisherHand(false, eye + frame * new Vector3(-.18f, -.24f, .74f),
+            frame * new Vector3(.5f, .9f, 1f), frame * new Vector3(0f, .3f, 1f),
+            frame * Vector3.right, gripAlongDist, -gripNormalDist);
         TrackAnchorsToHands();
     }
 

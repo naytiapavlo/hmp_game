@@ -13,6 +13,14 @@ namespace HMProtection.UI
         public UnityEvent deviceSettingsRequested = new UnityEvent();
         public UnityEvent howToPlayRequested = new UnityEvent();
 
+        private void Start()
+        {
+            // Cursor state survives scene loads. Claim it after outgoing gameplay/modal
+            // teardown, which may restore the hidden first-person cursor.
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
+
         public void StartTraining() => startTrainingRequested.Invoke();
         public void TrainingRecords() => trainingRecordsRequested.Invoke();
         public void DeviceSettings() => deviceSettingsRequested.Invoke();
