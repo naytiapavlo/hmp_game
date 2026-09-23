@@ -18,6 +18,9 @@ EditorBuildSettings:
     path: Assets/Levels/level_1_initial_fire/Scenes/level_1_initial_fire.unity
     guid: aaceac10394ad204fa9bbb38462b3a87
   - enabled: 1
+    path: "Assets/Scenes/\u7B2C\u4E09\u573A\u666F.unity"
+    guid: bf68527b44cba8746a6c0d3c53348fd8
+  - enabled: 1
     path: Assets/Levels/third_scene_shared_modules_a/Scenes/third_scene_shared_modules_a.unity
     guid: 58dd1b58558a02240a4e5156cdcd9726
   - enabled: 1

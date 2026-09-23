@@ -542,6 +542,11 @@ namespace HMProtection.Core
                 + "（" + stage.displayName + "／" + stage.kind + "）");
 
             ApplyPlayerControl(stage.playerControl);
+            // 把操控交还给玩家的阶段，不能还盖着加载遮罩：第一关是靠答题流程（OfficeFireChoiceFlow →
+            // QuizLoadingOverlay.Reveal）撤掉它的，没有答题段的关卡（如第二关自由练习）没有别的地方会撤，
+            // 会永远停在"PREPARING TRAINING"。已隐藏时 Reveal() 自己 no-op，第一关时序不变。
+            if (stage.playerControl && QuizLoadingOverlay.IsVisible)
+                StartCoroutine(QuizLoadingOverlay.Reveal());
             holdFrozen = stage.freezeFire;
             RefreshFrozen();
             ApplyFire(stage.fireCue, stage.displayName);

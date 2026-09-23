@@ -28,6 +28,12 @@ namespace HMProtection.Core
         public int order;
         /// <summary>进关 CG 转场视频名（Assets/CG 下的 mp4，空 = 无 CG）</summary>
         public string transitionVideo;
+        /// <summary>选关卡片的标题（空 = 用 displayName）。主菜单视觉是英文，卡片文案走这里，不必改代码</summary>
+        public string cardTitle;
+        /// <summary>选关卡片的副标题（空 = 用 displayName）</summary>
+        public string cardDescription;
+        /// <summary>选关卡片的切图，Resources 下的 Sprite 路径（如 "SceneSelection/OfficePreview"，空 = 不显示预览图）</summary>
+        public string cardImage;
     }
 
     [Serializable]
