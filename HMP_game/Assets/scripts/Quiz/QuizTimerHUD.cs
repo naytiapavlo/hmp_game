@@ -40,7 +40,9 @@ namespace HMProtection.Quiz
         public event Action TimedOut;
 
         const float MilestonePopSeconds = .3f;
-        double startedAt;
+        HMProtection.Core.StageTimer clock;
+        HMProtection.Modules.Assessment.QuestionSession attempt;
+        public string AttemptId => attempt?.Attempt.AttemptId;
         double[] litAt;
 
         void OnEnable()
@@ -55,7 +57,7 @@ namespace HMProtection.Quiz
         void OnQuestionPresented()
         {
             float seconds = durationSeconds;
-            if (useQuestionTimeLimit && SceneChoiceCatalog.TryLoad(out var catalog, out _))
+            if (useQuestionTimeLimit && flow != null && flow.presenter != null && flow.presenter.TryGetCatalog(out var catalog, out _))
             {
                 var question = catalog.Find(flow.questionId);
                 if (question != null && question.timeLimitSeconds > 0f) seconds = question.timeLimitSeconds;
@@ -64,11 +66,22 @@ namespace HMProtection.Quiz
         }
         void OnQuestionCancelled() => StopCountdown();
 
-        /// <summary>开始一轮倒计时并显示进度条。用 realtime 时钟，不依赖 timeScale。</summary>
+        /// <summary>开始一轮倒计时；题目与阶段共用 Session 仿真时钟及暂停语义。</summary>
         public void Begin(float seconds)
         {
             durationSeconds = Mathf.Max(.1f, seconds);
-            startedAt = Time.realtimeSinceStartupAsDouble;
+            attempt?.TryCancel(ElapsedSeconds, out _);
+            attempt = new HMProtection.Modules.Assessment.QuestionSession(Guid.NewGuid().ToString("N"),
+                flow != null ? flow.questionId : "standalone", 0d, durationSeconds);
+            if (clock == null)
+            {
+                var owner = new GameObject("Question Clock");
+                owner.transform.SetParent(transform, false);
+                clock = owner.AddComponent<HMProtection.Core.StageTimer>();
+                clock.OnExpired += OnClockExpired;
+            }
+            clock.sessionHost = flow != null && flow.entityBindings != null ? flow.entityBindings.sessionHost : null;
+            clock.Begin(durationSeconds);
             HasFired = false; IsRunning = true;
             RemainingSeconds = durationSeconds; Progress01 = 0f; ElapsedSeconds = 0f;
             int count = milestoneFlames != null ? milestoneFlames.Length : 0;
@@ -83,7 +96,9 @@ namespace HMProtection.Quiz
         public void StopCountdown()
         {
             if (IsRunning) ReadClock();
+            attempt?.TryCancel(ElapsedSeconds, out _);
             IsRunning = false;
+            if (clock != null) clock.Stop();
             if (canvas != null) canvas.gameObject.SetActive(false);
         }
         void Update()
@@ -107,9 +122,10 @@ namespace HMProtection.Quiz
             UpdateLabel();
             ExpireIfDue();
         }
+        void OnClockExpired() => ExpireIfDue();
         void ReadClock()
         {
-            ElapsedSeconds = Mathf.Clamp((float)(Time.realtimeSinceStartupAsDouble - startedAt), 0f, durationSeconds);
+            ElapsedSeconds = clock != null ? Mathf.Clamp(clock.Elapsed, 0f, durationSeconds) : 0f;
             Progress01 = Mathf.Clamp01(ElapsedSeconds / durationSeconds);
             RemainingSeconds = Mathf.Max(0f, durationSeconds - ElapsedSeconds);
         }
@@ -127,13 +143,19 @@ namespace HMProtection.Quiz
         {
             if (!IsRunning) return HasFired;
             ReadClock();
-            if (RemainingSeconds <= 0f)
+            if (RemainingSeconds <= 0f && (attempt == null || attempt.TryTimeout(ElapsedSeconds, out _)))
             {
                 IsRunning = false; HasFired = true;
                 if (canvas != null) canvas.gameObject.SetActive(false);
                 TimedOut?.Invoke();
             }
             return HasFired;
+        }
+        public bool TryCompleteAnswer(string optionId)
+        {
+            if (ExpireIfDue() || attempt == null) return false;
+            return attempt.TryAnswer(optionId, ElapsedSeconds, out var result)
+                && result.Resolution == HMProtection.Modules.Assessment.QuestionResolution.Answered;
         }
         void PlaceMilestone(int index, bool lit, float sinceLit)
         {

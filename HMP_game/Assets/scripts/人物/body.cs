@@ -15,6 +15,8 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(CharacterController))]
 public class body : MonoBehaviour
 {
+    public HMProtection.EntityAdapters.LevelSessionHost sessionHost;
+
     [Header("控制开关")]
     [Tooltip("玩家控制总开关：关闭后停止移动与转视角，并释放鼠标光标（默认开）")]
     public bool controlEnabled = true;
@@ -84,8 +86,8 @@ public class body : MonoBehaviour
         if (!controlEnabled) return;
 
         // 交互状态：坐姿等场景只锁移动不锁视角；过渡瞬间连视角也短暂锁定
-        if (!lookLocked) HandleLook();
-        if (!movementLocked) HandleMovement();
+        if (!lookLocked && (sessionHost == null || !sessionHost.IsBlocked(HMProtection.Sessions.ControlMask.Look))) HandleLook();
+        if (!movementLocked && (sessionHost == null || !sessionHost.IsBlocked(HMProtection.Sessions.ControlMask.Movement))) HandleMovement();
     }
 
     // ==== 交互系统接口（供 Interactor / SeatController 调用，基础控制逻辑不变） ====
@@ -114,7 +116,7 @@ public class body : MonoBehaviour
     // 关闭时释放光标，方便调试或后续 UI 阶段接管输入。
     private void UpdateCursorState()
     {
-        bool shouldLock = controlEnabled;
+        bool shouldLock = controlEnabled && (sessionHost == null || !sessionHost.IsBlocked(HMProtection.Sessions.ControlMask.Look));
         if (shouldLock == cursorLocked) return;
         cursorLocked = shouldLock;
         Cursor.lockState = shouldLock ? CursorLockMode.Locked : CursorLockMode.None;

@@ -1,0 +1,10 @@
+PASS
+PASS ready session, entity scope, player/spawn roles and two fire capabilities
+PASS door, pickup and seat commands execute through entity capabilities
+PASS dual fire entities retain independent state through entity capabilities
+PASS fire physics: root/upper/range/obstruction, bounded multi-target budget and ToolUse gate
+PASS simulation control lease pauses and resumes fire and shared simulation timer
+PASS two same-scene definitions switch level IDs and ten scope exits/re-entries invalidate every prior handle
+PASS destroyed scoped entity is purged and its stale command handle is rejected
+PASS same-scene navigation consumes Definition B, rejects overlap, rejects post-native-load cancellation, and invalidates prior scope
+PASS menu return completes navigation and leaves no running level session

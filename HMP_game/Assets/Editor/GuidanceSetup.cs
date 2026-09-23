@@ -24,6 +24,8 @@ public static class GuidanceSetup
     private const string ArrowMatPath = "Assets/Guidance/MAT_GuidanceArrow.mat";
     private const string MarkerMatPath = "Assets/Guidance/MAT_GuidanceMarker.mat";
     private const string ShaderName = "HMProtection/GuidanceArrow";
+    private const string LegacyOfficeScene = "Assets/Scenes/办公室场景.unity";
+    private const string LegacyThirdScene = "Assets/Scenes/第三场景.unity";
 
     static GuidanceSetup()
     {
@@ -39,6 +41,7 @@ public static class GuidanceSetup
     {
         Scene scene = SceneManager.GetActiveScene();
         if (string.IsNullOrEmpty(scene.name)) return;
+        if (!IsLegacyOwnedScene(scene)) return;
         string markerPath = MarkerPathFor(scene);
         if (File.Exists(markerPath)) return;
         if (EditorApplication.isCompiling || EditorApplication.isUpdating) { EditorApplication.delayCall += Run; return; }
@@ -64,6 +67,8 @@ public static class GuidanceSetup
         Debug.Log("GuidanceSetup finished. scene=" + scene.name + " processed=" + processed
                   + " error=" + (error ?? "none") + " report=" + ReportPath);
     }
+
+    private static bool IsLegacyOwnedScene(Scene scene) => scene.path == LegacyOfficeScene || scene.path == LegacyThirdScene;
 
     [MenuItem("Tools/Guidance/Re-run Guidance Setup")]
     public static void ForceRerun()

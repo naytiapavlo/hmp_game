@@ -9158,7 +9158,7 @@ MonoBehaviour:
   suppression: {fileID: 1461051587}
   sprayVfxPrefab: {fileID: 185705013193658421, guid: 29f1d116447a657488bac3e0ea83fe7b, type: 3}
   hoseNozzle: {fileID: 777705402}
-  nozzleLocalPosition: {x: 0, y: 0.4600001, z: 0.18951465}
+  nozzleLocalPosition: {x: 0, y: 0.46000004, z: 0.18951465}
   range: 3
   rootBandHeight: 0.35
   rootBandRadius: 0.5
@@ -13107,7 +13107,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PickupItem
   carryMode: 0
-  interactPromptOverride:
+  interactPromptOverride: 
   holdPositionOffset: {x: 0, y: 0.03, z: 0}
   holdRotationOffset: {x: -90, y: 0, z: 0}
   holdAlignsToView: 0

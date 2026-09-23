@@ -4,8 +4,8 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using HMProtection.Navigation;
 
 namespace HMProtection.UI
 {
@@ -27,6 +27,8 @@ namespace HMProtection.UI
         [SerializeField] private string officeScenePath = "Assets/Scenes/办公室场景.unity";
         [Tooltip("选完场景后的起火 CG 转场（闪黑→CG→黑场渐出），留空则直接加载")]
         [SerializeField] private CgTransitionPlayer cgTransition;
+
+        public HMProtection.EntityAdapters.LevelDefinition officeDefinition;
 
         private bool officeSelected;
         private bool loading;
@@ -78,11 +80,6 @@ namespace HMProtection.UI
         public void StartSelectedScene()
         {
             if (!officeSelected || loading) return;
-            if (!Application.CanStreamedLevelBeLoaded(officeScenePath))
-            {
-                selectionStatus.text = "Office is unavailable. Please try again later.";
-                return;
-            }
             StartCoroutine(LoadOffice());
         }
 
@@ -98,42 +95,51 @@ namespace HMProtection.UI
             loadingProgress.fillAmount = 0;
             loadingLabel.text = "Loading Office... 0%";
             EventSystem.current?.SetSelectedGameObject(null);
-            // Paint loading feedback before beginning scene deserialization.
-            yield return null;
-            AsyncOperation operation = null;
-            string error = null;
-            try { operation = SceneManager.LoadSceneAsync(officeScenePath, LoadSceneMode.Single); }
-            catch (Exception exception) { error = exception.Message; }
-            if (operation == null)
+            NavigationOperation operation;
+            string error;
+            bool accepted = officeDefinition != null
+                ? AppNavigationService.Instance.TryLoadDefinition(officeDefinition, out operation, out error)
+                : AppNavigationService.Instance.TryLoadSingle(officeScenePath, out operation, out error);
+            if (!accepted)
             {
                 HMProtection.Quiz.OfficeFireChoiceFlow.CancelPendingEntry();
-                loading = false;
-                if (cgTransition != null && cgTransition.HasClip) cgTransition.CancelTransition(); // 黑场退回，别把用户困在黑屏里
-                QuizLoadingOverlay.Hide();
-                loadingOverlay.SetActive(false);
-                officeCard.interactable = backButton.interactable = closeButton.interactable = true;
-                startButton.interactable = officeSelected;
-                selectionStatus.text = "Unable to load Office. Please try again.";
-                Debug.LogError("Office scene load failed: " + error, this);
-                EventSystem.current?.SetSelectedGameObject(startButton.gameObject);
+                RestoreAfterLoadFailure(error);
                 yield break;
             }
-            operation.allowSceneActivation = false;
-            while (operation.progress < .9f)
+            if (cgTransition != null && cgTransition.HasClip) cgTransition.BeginCgTransition(operation);
+            while (operation.State == NavigationState.Loading)
             {
-                float progress = Mathf.Clamp01(operation.progress / .9f);
+                float progress = operation.Progress;
                 loadingProgress.fillAmount = progress;
                 loadingLabel.text = "Loading Office... " + Mathf.RoundToInt(progress * 100) + "%";
                 QuizLoadingOverlay.SetProgress(.05f + .1f * progress, "Loading the training scene...");
                 yield return null;
             }
+            if (operation.State == NavigationState.Failed || operation.State == NavigationState.Cancelled)
+            {
+                HMProtection.Quiz.OfficeFireChoiceFlow.CancelPendingEntry();
+                RestoreAfterLoadFailure(operation.Error);
+                yield break;
+            }
             loadingProgress.fillAmount = 1;
             loadingLabel.text = "Loading Office... 100%";
-            yield return null;
             // 等 CG 播完（或被跳过）再进第一人称；场景在黑场后早已加载就绪，激活瞬间完成
             if (cgTransition != null && cgTransition.HasClip)
                 while (!cgTransition.VideoDone) yield return null;
-            operation.allowSceneActivation = true;
+            operation.AllowActivation();
+        }
+
+        void RestoreAfterLoadFailure(string error)
+        {
+            loading = false;
+            if (cgTransition != null && cgTransition.HasClip) cgTransition.CancelTransition();
+            QuizLoadingOverlay.Hide();
+            loadingOverlay.SetActive(false);
+            officeCard.interactable = backButton.interactable = closeButton.interactable = true;
+            startButton.interactable = officeSelected;
+            selectionStatus.text = "Unable to load Office. Please try again.";
+            Debug.LogError("Office scene load failed: " + error, this);
+            EventSystem.current?.SetSelectedGameObject(startButton.gameObject);
         }
     }
 }

@@ -46,6 +46,12 @@ namespace HMProtection.Quiz
         public bool enabled;
         public string speaker, videoPath;
         public InstructorDialogue correct, incorrect;
+        // Optional generic sequence entry. Legacy first/second/video/third fields remain supported.
+        public InstructorLessonStep[] steps;
+    }
+    [Serializable] public sealed class InstructorLessonStep
+    {
+        public string id, kind, text, videoPath;
     }
     [Serializable] public sealed class SceneChoiceResult
     {
@@ -89,10 +95,16 @@ namespace HMProtection.Quiz
                     if (q.instructor != null && q.instructor.enabled)
                     {
                         Require(!string.IsNullOrWhiteSpace(q.instructor.speaker), q.id + ": instructor speaker is empty.");
-                        foreach (var dialogue in new[] { q.instructor.correct, q.instructor.incorrect })
-                            Require(dialogue != null && !string.IsNullOrWhiteSpace(dialogue.first)
-                                && !string.IsNullOrWhiteSpace(dialogue.second) && !string.IsNullOrWhiteSpace(dialogue.third),
-                                q.id + ": correct/incorrect must each contain first, second and third dialogue lines.");
+                        bool hasSteps = q.instructor.steps != null && q.instructor.steps.Length > 0;
+                        if (!hasSteps)
+                            foreach (var dialogue in new[] { q.instructor.correct, q.instructor.incorrect })
+                                Require(dialogue != null && !string.IsNullOrWhiteSpace(dialogue.first)
+                                    && !string.IsNullOrWhiteSpace(dialogue.second) && !string.IsNullOrWhiteSpace(dialogue.third),
+                                    q.id + ": correct/incorrect must each contain first, second and third dialogue lines.");
+                        if (hasSteps)
+                            foreach (var step in q.instructor.steps)
+                                Require(step != null && (step.kind == "line" || step.kind == "video")
+                                    && (step.kind != "line" || !string.IsNullOrWhiteSpace(step.text)), q.id + ": invalid instructor step.");
                     }
                     var optionIds = new HashSet<string>(StringComparer.Ordinal);
                     foreach (var o in q.options)

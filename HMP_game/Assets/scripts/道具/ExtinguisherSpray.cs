@@ -21,8 +21,14 @@ using UnityEngine.InputSystem;
 public class ExtinguisherSpray : MonoBehaviour
 {
     [Header("接线")]
-    [Tooltip("火焰压制状态机（挂「起火点」上；留空自动全场景查找）")]
+    [Tooltip("兼容旧场景的单个明确目标；不再自动全场景查找")]
     [SerializeField] private FireSuppression suppression;
+    [Tooltip("本喷射器可作用的明确火源候选。关卡 Scope 注册后由安装器填入。")]
+    [SerializeField] private FireSuppression[] suppressionTargets;
+    [Tooltip("每帧最多评估的火源数，避免大关卡喷射时产生无界物理查询。")]
+    [SerializeField, Min(1)] private int targetSampleBudget = 8;
+    [Tooltip("射线到火焰根部前被其它碰撞体遮挡时不计有效。")]
+    [SerializeField] private LayerMask obstructionMask = ~0;
     [Tooltip("喷射粒子预制体（VFX_ExtinguisherSpray）")]
     [SerializeField] private GameObject sprayVfxPrefab;
 
@@ -77,6 +83,12 @@ public class ExtinguisherSpray : MonoBehaviour
     private float sprayStartedAt = -1f;
 
     private ExtinguisherCarryRig carryRig;
+    // Fixed priority is explicit: legacy single target first, then serialized
+    // candidates in Inspector order.  The bounded arrays keep held-spray Update
+    // allocation-free even in levels that expose many possible fire sources.
+    private const int MaxTargetSamples = 16;
+    private readonly FireSuppression[] targetBuffer = new FireSuppression[MaxTargetSamples];
+    private readonly SprayHitQuality[] qualityBuffer = new SprayHitQuality[MaxTargetSamples];
 
     // 喷射有效命中：准星淡蓝白微放大（粉雾打在火焰根部的感觉）
     private static readonly Color SprayHitColor = new Color(0.72f, 0.90f, 1.00f, 0.95f);
@@ -87,7 +99,6 @@ public class ExtinguisherSpray : MonoBehaviour
         foreach (Transform child in GetComponentsInChildren<Transform>(true))
             if (hoseNozzle == null && child.name == "Nozzle") { hoseNozzle = child; break; }
         pickup = GetComponent<PickupItem>();
-        if (suppression == null) suppression = FindAnyObjectByType<FireSuppression>();
         hud = InteractionHUD.EnsureExists();   // Interactor.Awake 建过就直接复用
         carryRig = GetComponent<ExtinguisherCarryRig>();
         if (carryRig == null) carryRig = gameObject.AddComponent<ExtinguisherCarryRig>();
@@ -96,10 +107,8 @@ public class ExtinguisherSpray : MonoBehaviour
     private void Update()
     {
         if (pickup == null) pickup = GetComponent<PickupItem>();
-        if (suppression == null) suppression = FindAnyObjectByType<FireSuppression>();
-
         bool held = pickup != null && pickup.IsHeld;
-        bool wantSpray = held && pinPulled && Mouse.current != null
+        bool wantSpray = held && pinPulled && ToolUseAllowed() && Mouse.current != null
                          && Mouse.current.leftButton.isPressed
                          && !PointerOverUi();
 
@@ -121,10 +130,7 @@ public class ExtinguisherSpray : MonoBehaviour
             float dt = Time.deltaTime;
             SpraySecondsTotal += dt;
 
-            SprayHitQuality quality = suppression != null && viewCamera != null
-                ? EvaluateHit()
-                : SprayHitQuality.None;
-            if (suppression != null) suppression.ApplySpray(quality);
+            SprayHitQuality quality = ApplyToTargets();
             ApplyFeedback(quality);
 
             TrackSweep(dt);
@@ -148,6 +154,13 @@ public class ExtinguisherSpray : MonoBehaviour
 
         // 持握期间：节流报告「喷头 ↔ 左手抓握点」偏差（两点持握调参的唯一依据）
 
+    }
+
+    /// <summary>Explicit runtime wiring for a scoped level. No global scene discovery occurs.</summary>
+    public void ConfigureTargets(FireSuppression legacyTarget, FireSuppression[] targets)
+    {
+        suppression = legacyTarget;
+        suppressionTargets = targets;
     }
 
     // After arms, cylinder and nozzle have reached this frame's final poses.
@@ -201,28 +214,90 @@ public class ExtinguisherSpray : MonoBehaviour
 
     // ==== 命中判定（解析几何：射线 × 竖直圆柱带，不用物理） ====
 
-    private SprayHitQuality EvaluateHit()
+    private SprayHitQuality ApplyToTargets()
+    {
+        if (viewCamera == null) return SprayHitQuality.None;
+        SprayHitQuality best = SprayHitQuality.None;
+        int sampled = CollectTargets();
+        for (int i = 0; i < sampled; i++)
+        {
+            FireSuppression target = targetBuffer[i];
+            SprayHitQuality quality = EvaluateHit(target);
+            qualityBuffer[i] = quality;
+            if (QualityRank(quality) > QualityRank(best)) best = quality;
+        }
+        int effectiveCount = 0;
+        for (int i = 0; i < sampled; i++) if (qualityBuffer[i] == SprayHitQuality.Effective) effectiveCount++;
+        float share = CoverageShareForEffectiveTarget(effectiveCount);
+        for (int i = 0; i < sampled; i++)
+            targetBuffer[i].ApplySpray(qualityBuffer[i], qualityBuffer[i] == SprayHitQuality.Effective ? share : 0f);
+        return best;
+    }
+
+    private int CollectTargets()
+    {
+        int count = 0;
+        int limit = Mathf.Min(MaxTargetSamples, Mathf.Max(1, targetSampleBudget));
+        AddTarget(suppression, ref count, limit);
+        if (suppressionTargets == null) return count;
+        for (int i = 0; i < suppressionTargets.Length; i++)
+        {
+            if (count >= limit) break;
+            AddTarget(suppressionTargets[i], ref count, limit);
+        }
+        return count;
+    }
+
+    private void AddTarget(FireSuppression target, ref int count, int limit)
+    {
+        if (target == null || !target.isActiveAndEnabled || count >= limit) return;
+        for (int i = 0; i < count; i++) if (targetBuffer[i] == target) return;
+        targetBuffer[count++] = target;
+    }
+
+    private static int QualityRank(SprayHitQuality quality) => quality switch
+    {
+        SprayHitQuality.Effective => 3, SprayHitQuality.TooHigh => 2, SprayHitQuality.TooFar => 1, _ => 0,
+    };
+
+    /// <summary>One tool's normalized budget is divided among its valid fire targets.</summary>
+    public static float CoverageShareForEffectiveTarget(int effectiveTargetCount) =>
+        effectiveTargetCount > 0 ? 1f / effectiveTargetCount : 0f;
+
+    private SprayHitQuality EvaluateHit(FireSuppression target)
     {
         // 起火点锚点由 FireEffectController.LateUpdate 贴在起火道具顶面 +0.02，即火焰根部
-        Vector3 basePos = suppression.transform.position;
+        Vector3 basePos = target.transform.position;
         Vector3 nozzle = NozzlePosition;
         if (Vector3.Distance(nozzle, basePos) > range) return SprayHitQuality.TooFar;
 
         Transform camT = viewCamera.transform;
-        Ray main = new Ray(camT.position, camT.forward);
-        Ray left = RotateRay(main, -scatterDegrees, camT.up);
-        Ray right = RotateRay(main, scatterDegrees, camT.up);
+        return EvaluateTarget(target, new Ray(camT.position, camT.forward), camT.up);
+    }
+
+    /// <summary>Uses the production root-band and obstruction algorithm for editor/play checks.</summary>
+    public SprayHitQuality EvaluateTargetForTest(FireSuppression target, Ray aimRay, Vector3 up) =>
+        EvaluateTarget(target, aimRay, up);
+
+    private SprayHitQuality EvaluateTarget(FireSuppression target, Ray main, Vector3 up)
+    {
+        if (target == null) return SprayHitQuality.None;
+        Vector3 basePos = target.transform.position;
+        Vector3 nozzle = NozzlePosition;
+        if (Vector3.Distance(nozzle, basePos) > range) return SprayHitQuality.TooFar;
+        Ray left = RotateRay(main, -scatterDegrees, up);
+        Ray right = RotateRay(main, scatterDegrees, up);
 
         // 先看是否命中根部带（有效）；再看是否只够到更高的「火苗上部」带（无效）
-        if (RayHitsBand(main, basePos, rootBandRadius, rootBandHeight)
-            || RayHitsBand(left, basePos, rootBandRadius, rootBandHeight)
-            || RayHitsBand(right, basePos, rootBandRadius, rootBandHeight))
+        if (RayHitsBand(main, basePos, rootBandRadius, rootBandHeight, target)
+            || RayHitsBand(left, basePos, rootBandRadius, rootBandHeight, target)
+            || RayHitsBand(right, basePos, rootBandRadius, rootBandHeight, target))
             return SprayHitQuality.Effective;
 
         float upperHeight = rootBandHeight * 3.2f;
-        if (RayHitsBand(main, basePos, rootBandRadius * 1.1f, upperHeight)
-            || RayHitsBand(left, basePos, rootBandRadius * 1.1f, upperHeight)
-            || RayHitsBand(right, basePos, rootBandRadius * 1.1f, upperHeight))
+        if (RayHitsBand(main, basePos, rootBandRadius * 1.1f, upperHeight, target)
+            || RayHitsBand(left, basePos, rootBandRadius * 1.1f, upperHeight, target)
+            || RayHitsBand(right, basePos, rootBandRadius * 1.1f, upperHeight, target))
             return SprayHitQuality.TooHigh;
 
         return SprayHitQuality.None;
@@ -232,7 +307,7 @@ public class ExtinguisherSpray : MonoBehaviour
         new Ray(ray.origin, Quaternion.AngleAxis(degrees, axis) * ray.direction);
 
     /// <summary>射线与「basePos 底、给定半径/高度的竖直圆柱带」是否相交（只算射线正向，允许轻微下探）。</summary>
-    private static bool RayHitsBand(Ray ray, Vector3 basePos, float radius, float height)
+    private bool RayHitsBand(Ray ray, Vector3 basePos, float radius, float height, FireSuppression target)
     {
         Vector3 o = ray.origin - basePos;
         Vector3 d = ray.direction;
@@ -244,7 +319,11 @@ public class ExtinguisherSpray : MonoBehaviour
 
         Vector3 p = o + d * t;
         float horizDist = new Vector2(p.x, p.z).magnitude;
-        return horizDist <= radius && p.y >= -0.05f && p.y <= height;
+        if (horizDist > radius || p.y < -0.05f || p.y > height) return false;
+        float hitDistance = t;
+        if (Physics.Raycast(ray, out RaycastHit obstruction, hitDistance, obstructionMask, QueryTriggerInteraction.Ignore)
+            && obstruction.collider != null && !obstruction.collider.transform.IsChildOf(target.transform)) return false;
+        return true;
     }
 
     // ==== 统计与工具 ====
@@ -265,6 +344,16 @@ public class ExtinguisherSpray : MonoBehaviour
         if (view != null) viewCamera = view.GetComponent<Camera>();
         if (viewCamera == null) viewCamera = Camera.main;
     }
+
+    private bool ToolUseAllowed()
+    {
+        body actorBody = pickup != null && pickup.Carrier != null
+            ? pickup.Carrier.GetComponent<body>() : null;
+        return IsToolUseAllowed(actorBody);
+    }
+
+    public static bool IsToolUseAllowed(body actorBody) => actorBody == null || actorBody.sessionHost == null
+        || !actorBody.sessionHost.IsBlocked(HMProtection.Sessions.ControlMask.ToolUse);
 
     private void EnsureEmitter()
     {

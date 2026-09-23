@@ -1,0 +1,163 @@
+{
+  "id": "level_1_initial_fire",
+  "displayName": "初起火灾应对",
+  "description": "办公区插排过载引发初起火灾，学习报警、断电与扑救判断。",
+  "spawnPoint": "LevelBootstrapper/锚点_出生点",
+
+  "stages": [
+    {
+      "id": "ignition_cutscene",
+      "displayName": "失火原因动画",
+      "kind": "cutscene",
+      "duration": 6.0,
+      "timed": false,
+      "fireCue": "ignition_smoke",
+      "fireCueAt": 2.5,
+      "secondaryFireCue": "ignition_flame",
+      "playerControl": false,
+      "frameFire": true,
+      "freezeFire": false
+    },
+    {
+      "id": "quiz",
+      "displayName": "俯视答题",
+      "kind": "quiz",
+      "questionId": "office_fire_first_action",
+      "duration": 15.0,
+      "timed": true,
+      "fireCue": "fire_initial",
+      "playerControl": false,
+      "freezeFire": false
+    },
+    {
+      "id": "free_roam",
+      "displayName": "自由移动 + 取物指引",
+      "kind": "freeRoam",
+      "duration": 50.0,
+      "timed": true,
+      "fireCue": "fire_initial",
+      "playerControl": true,
+      "freezeFire": false
+    },
+    {
+      "id": "result_cutscene",
+      "displayName": "结果动画",
+      "kind": "result",
+      "duration": 6.0,
+      "timed": false,
+      "playerControl": false,
+      "freezeFire": false,
+      "correctFireCue": "fire_after_smoke",
+      "correctEndFireCue": "fire_out",
+      "correctEndAt": 1.5,
+      "wrongFireCue": "fire_large"
+    },
+    {
+      "id": "quiz_no_extinguisher",
+      "displayName": "第二题：没有灭火器",
+      "kind": "quiz",
+      "questionId": "office_fire_no_extinguisher",
+      "resetPlayerToSpawn": true,
+      "duration": 45.0,
+      "timed": true,
+      "fireCue": "fire_initial",
+      "playerControl": false,
+      "freezeFire": false
+    },
+    {
+      "id": "free_roam_no_extinguisher",
+      "displayName": "第二题：选择行动",
+      "kind": "freeRoam",
+      "duration": 45.0,
+      "timed": false,
+      "fireCue": "fire_initial",
+      "playerControl": true,
+      "freezeFire": false
+    },
+    {
+      "id": "result_no_extinguisher",
+      "displayName": "第二题：反馈后过渡",
+      "kind": "result",
+      "duration": 1.0,
+      "timed": false,
+      "playerControl": false,
+      "freezeFire": true,
+      "correctFireCue": "fire_initial",
+      "wrongFireCue": "fire_large"
+    },
+    {
+      "id": "quiz_damaged_strip",
+      "displayName": "第三题：确认安全后处理受损设备",
+      "kind": "quiz",
+      "questionId": "office_damaged_strip",
+      "resetPlayerToSpawn": true,
+      "duration": 45.0,
+      "timed": false,
+      "fireCue": "fire_out",
+      "playerControl": false,
+      "freezeFire": true
+    },
+    {
+      "id": "free_roam_damaged_strip",
+      "displayName": "第三题：选择行动",
+      "kind": "freeRoam",
+      "duration": 45.0,
+      "timed": false,
+      "fireCue": "fire_out",
+      "playerControl": true,
+      "freezeFire": true
+    },
+    {
+      "id": "result_damaged_strip",
+      "displayName": "第三题：反馈后过渡",
+      "kind": "result",
+      "duration": 1.0,
+      "timed": false,
+      "playerControl": false,
+      "freezeFire": true,
+      "correctFireCue": "fire_out",
+      "wrongFireCue": "fire_out"
+    },
+    {
+      "id": "settlement",
+      "displayName": "结算",
+      "kind": "settlement",
+      "duration": 2.0,
+      "timed": false,
+      "fireCue": "fire_out",
+      "playerControl": false,
+      "freezeFire": false
+    }
+  ],
+
+  "quiz": {
+    "questionId": "office_fire_first_action",
+    "correctOptionId": "raise_alarm",
+    "secondsPerQuestion": 45.0,
+    "narrationSeconds": 6.0,
+    "waitForContinue": false,
+    "continueFallbackSeconds": 20.0,
+    "totalQuestions": 3,
+    "scorePerQuestion": 7.5,
+    "passCorrectCount": 3,
+    "resultUsesLastAnswer": true
+  },
+
+  "guidanceRoutes": [
+    {
+      "id": "route_power_strip",
+      "label": "Burning Power Strip",
+      "destinationPath": "起火点",
+      "visibleDuringPlay": true
+    }
+  ],
+
+  "fireCues": [
+    { "id": "ignition_smoke", "level": "SmokeOnly", "intensity": 1.0, "scale": 1.0, "smokeAmount": 1.0, "useVfxParams": false },
+    { "id": "ignition_flame", "level": "Small",     "intensity": 1.0, "scale": 1.0, "smokeAmount": 1.0, "useVfxParams": false },
+    { "id": "fire_initial",   "level": "Small",     "intensity": 1.0, "scale": 1.0, "smokeAmount": 1.0, "useVfxParams": false },
+    { "id": "fire_after_smoke","level": "SmokeOnly","intensity": 1.0, "scale": 0.8, "smokeAmount": 1.0, "useVfxParams": false },
+    { "id": "fire_large",     "level": "Large",     "intensity": 1.0, "scale": 1.0, "smokeAmount": 1.0, "useVfxParams": false },
+    { "id": "fire_out",       "level": "None",      "intensity": 0.0, "scale": 1.0, "smokeAmount": 0.0, "useVfxParams": false }
+  ]
+}

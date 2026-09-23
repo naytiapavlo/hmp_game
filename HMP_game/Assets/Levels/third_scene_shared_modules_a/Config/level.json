@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "levelId": "third_scene_shared_modules_a",
+  "displayName": "通用模块训练 A",
+  "scene": "Scenes/third_scene_shared_modules_a.unity",
+  "script": {
+    "enabled": true,
+    "entry": "Scripts/main.lua"
+  },
+  "artRoots": [
+    "Art"
+  ],
+  "legacy": {
+    "enabled": false,
+    "configResource": ""
+  },
+  "initialFires": [
+    {
+      "entityId": "fire.third.a",
+      "state": "Small"
+    },
+    {
+      "entityId": "fire.third.b",
+      "state": "Medium"
+    }
+  ]
+}

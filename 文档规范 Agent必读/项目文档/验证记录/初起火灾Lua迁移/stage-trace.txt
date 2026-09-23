@@ -1,0 +1,119 @@
+[LevelBoot] 玩家定位到出生点 (5.69, 0.91, 5.77)
+[LevelFlow] 开局：level_1_initial_fire　入口=主菜单选场景
+[LevelFlow] 阶段 1/11 → ignition_cutscene（失火原因动画／cutscene）
+[LevelFlow] [火势] 失火原因动画 → SmokeOnly（cue ignition_smoke，实例 已生成）
+[LevelFlow] 相机转向起火点 (8.18, 1.08, 4.15)（yaw 123°, pitch 12°）
+[LevelFlow] [火势] 失火原因动画·第二段 → Small（cue ignition_flame，实例 已生成）
+[LevelFlow] 阶段 2/11 → quiz（俯视答题／quiz）
+[LevelFlow] [火势] 俯视答题 → Small（cue fire_initial，实例 已生成）
+[LevelFlow] 冻结：火焰与计时一起停
+[LevelFlow] 暂停
+[LevelFlow] 解冻：火焰与计时继续
+[LevelFlow] 继续
+[LevelFlow] 阶段 3/11 → free_roam（自由移动 + 取物指引／freeRoam）
+[LevelFlow] [火势] 自由移动 + 取物指引 → Small（cue fire_initial，实例 已生成）
+[LevelFlow] 冻结：火焰与计时一起停
+[LevelFlow] 暂停
+[LevelFlow] 实体题完成：raise_alarm → 正确
+[LevelFlow] 解冻：火焰与计时继续
+[LevelFlow] 继续
+[LevelFlow] Selected destination interaction completed
+[LevelFlow] 阶段 4/11 → result_cutscene（结果动画／result）
+[LevelFlow] [火势] 结果动画：未配 cue，保持当前分级 Small
+[LevelFlow] 结果动画：分支 = 正确（火势缩小/熄灭）
+[LevelFlow] [火势] 结果动画·正确分支 → SmokeOnly（cue fire_after_smoke，实例 已生成）
+[LevelFlow] [火势] 结果动画·正确分支·余烟后熄灭 → None（cue fire_out，实例 无）
+[LevelFlow] 阶段 5/11 → quiz_no_extinguisher（第二题：没有灭火器／quiz）
+[LevelFlow] [火势] 第二题：没有灭火器 → Small（cue fire_initial，实例 已生成）
+[LevelBoot] 玩家定位到出生点 (5.69, 0.91, 5.77)
+[LevelFlow] 阶段 6/11 → free_roam_no_extinguisher（第二题：选择行动／freeRoam）
+[LevelFlow] [火势] 第二题：选择行动 → Small（cue fire_initial，实例 已生成）
+[LevelFlow] 冻结：火焰与计时一起停
+[LevelFlow] 暂停
+[LevelFlow] 实体题完成：evacuate_no_extinguisher → 正确
+[LevelFlow] 解冻：火焰与计时继续
+[LevelFlow] 继续
+[LevelFlow] Selected destination interaction completed
+[LevelFlow] 阶段 7/11 → result_no_extinguisher（第二题：反馈后过渡／result）
+[LevelFlow] 冻结：火焰与计时一起停
+[LevelFlow] [火势] 第二题：反馈后过渡：未配 cue，保持当前分级 Small
+[LevelFlow] 结果动画：分支 = 正确（火势缩小/熄灭）
+[LevelFlow] [火势] 结果动画·正确分支 → Small（cue fire_initial，实例 已生成）
+[LevelFlow] 阶段 8/11 → quiz_damaged_strip（第三题：确认安全后处理受损设备／quiz）
+[LevelFlow] [火势] 第三题：确认安全后处理受损设备 → None（cue fire_out，实例 无）
+[LevelBoot] 玩家定位到出生点 (5.69, 0.91, 5.77)
+[LevelFlow] 阶段 9/11 → free_roam_damaged_strip（第三题：选择行动／freeRoam）
+[LevelFlow] [火势] 第三题：选择行动 → None（cue fire_out，实例 无）
+[LevelFlow] 暂停
+[LevelFlow] 实体题完成：remove_damaged_strip → 正确
+[LevelFlow] 继续
+[LevelFlow] Selected destination interaction completed
+[LevelFlow] 阶段 10/11 → result_damaged_strip（第三题：反馈后过渡／result）
+[LevelFlow] [火势] 第三题：反馈后过渡：未配 cue，保持当前分级 None
+[LevelFlow] 结果动画：分支 = 正确（火势缩小/熄灭）
+[LevelFlow] [火势] 结果动画·正确分支 → None（cue fire_out，实例 无）
+[LevelFlow] 阶段 11/11 → settlement（结算／settlement）
+[LevelFlow] 解冻：火焰与计时继续
+[LevelFlow] [火势] 结算 → None（cue fire_out，实例 无）
+[LevelFlow] 冻结：火焰与计时一起停
+[LevelFlow] 关卡流程结束
+[LevelFlow] 解冻：火焰与计时继续
+[LevelFlow] 关卡流程结束
+[LevelFlow] 关卡流程结束
+[LevelBoot] 玩家定位到出生点 (5.69, 0.91, 5.77)
+[LevelFlow] 开局：level_1_initial_fire　入口=直接 Play 场景（开发/验收）
+[LevelFlow] 阶段 1/11 → ignition_cutscene（失火原因动画／cutscene）
+[LevelFlow] [火势] 失火原因动画 → SmokeOnly（cue ignition_smoke，实例 已生成）
+[LevelFlow] 相机转向起火点 (8.18, 1.08, 4.15)（yaw 123°, pitch 12°）
+[LevelFlow] [火势] 失火原因动画·第二段 → Small（cue ignition_flame，实例 已生成）
+[LevelFlow] 阶段 2/11 → quiz（俯视答题／quiz）
+[LevelFlow] [火势] 俯视答题 → Small（cue fire_initial，实例 已生成）
+[LevelFlow] 阶段 3/11 → free_roam（自由移动 + 取物指引／freeRoam）
+[LevelFlow] [火势] 自由移动 + 取物指引 → Small（cue fire_initial，实例 已生成）
+[LevelFlow] 冻结：火焰与计时一起停
+[LevelFlow] 暂停
+[LevelFlow] 实体题完成：rescue_documents → 错误
+[LevelFlow] 解冻：火焰与计时继续
+[LevelFlow] 继续
+[LevelFlow] Selected destination interaction completed
+[LevelFlow] 阶段 4/11 → result_cutscene（结果动画／result）
+[LevelFlow] [火势] 结果动画：未配 cue，保持当前分级 Small
+[LevelFlow] 结果动画：分支 = 错误（火势扩大）
+[LevelFlow] [火势] 结果动画·错误分支 → Large（cue fire_large，实例 已生成）
+[LevelFlow] 阶段 5/11 → quiz_no_extinguisher（第二题：没有灭火器／quiz）
+[LevelFlow] [火势] 第二题：没有灭火器 → Small（cue fire_initial，实例 已生成）
+[LevelBoot] 玩家定位到出生点 (5.69, 0.91, 5.77)
+[LevelFlow] 冻结：火焰与计时一起停
+[LevelFlow] 暂停
+[LevelFlow] 实体题完成：超时 → 错误
+[LevelFlow] 解冻：火焰与计时继续
+[LevelFlow] 继续
+[LevelFlow] 阶段 6/11 → free_roam_no_extinguisher（第二题：选择行动／freeRoam）
+[LevelFlow] [火势] 第二题：选择行动 → Small（cue fire_initial，实例 已生成）
+[LevelFlow] Selected destination interaction completed
+[LevelFlow] 阶段 7/11 → result_no_extinguisher（第二题：反馈后过渡／result）
+[LevelFlow] 冻结：火焰与计时一起停
+[LevelFlow] [火势] 第二题：反馈后过渡：未配 cue，保持当前分级 Small
+[LevelFlow] 结果动画：分支 = 错误（火势扩大）
+[LevelFlow] [火势] 结果动画·错误分支 → Large（cue fire_large，实例 已生成）
+[LevelFlow] 阶段 8/11 → quiz_damaged_strip（第三题：确认安全后处理受损设备／quiz）
+[LevelFlow] [火势] 第三题：确认安全后处理受损设备 → None（cue fire_out，实例 无）
+[LevelBoot] 玩家定位到出生点 (5.69, 0.91, 5.77)
+[LevelFlow] 阶段 9/11 → free_roam_damaged_strip（第三题：选择行动／freeRoam）
+[LevelFlow] [火势] 第三题：选择行动 → None（cue fire_out，实例 无）
+[LevelFlow] 暂停
+[LevelFlow] 实体题完成：remove_damaged_strip → 正确
+[LevelFlow] 继续
+[LevelFlow] Selected destination interaction completed
+[LevelFlow] 阶段 10/11 → result_damaged_strip（第三题：反馈后过渡／result）
+[LevelFlow] [火势] 第三题：反馈后过渡：未配 cue，保持当前分级 None
+[LevelFlow] 结果动画：分支 = 正确（火势缩小/熄灭）
+[LevelFlow] [火势] 结果动画·正确分支 → None（cue fire_out，实例 无）
+[LevelFlow] 阶段 11/11 → settlement（结算／settlement）
+[LevelFlow] 解冻：火焰与计时继续
+[LevelFlow] [火势] 结算 → None（cue fire_out，实例 无）
+[LevelFlow] 冻结：火焰与计时一起停
+[LevelFlow] 关卡流程结束
+[LevelFlow] 解冻：火焰与计时继续
+[LevelFlow] 关卡流程结束
+[LevelFlow] 关卡流程结束

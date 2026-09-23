@@ -1,0 +1,355 @@
+{
+  "questions": [
+    {
+      "id": "office_fire_first_action",
+      "correctOptionId": "raise_alarm",
+      "timeLimitSeconds": 45,
+      "numberedOptions": true,
+      "prompt": "1 / 3  FIRST RESPONSE\nSmoke is rising from a power strip. What will you do first?",
+      "instructor": {
+        "enabled": true,
+        "speaker": "INSTRUCTOR",
+        "videoPath": "Videos/office_fire_first_action.mp4",
+        "correct": {
+          "first": "Well done! You completed the right action. Let's review your decision together.",
+          "second": "Now watch this short lesson and compare it with what you did in the office.",
+          "third": "Great work. Keep what you have learned in mind as we continue the training."
+        },
+        "incorrect": {
+          "first": "That choice needs another look. This is a good chance to learn and improve.",
+          "second": "Let's watch the short lesson together, then think about a better first action.",
+          "third": "You have finished the review. Take a moment to reflect, then continue your training."
+        }
+      },
+      "options": [
+        { "id": "rescue_documents", "label": "Rescue Documents\nGo to the records room", "width": 420,
+          "interactionTargetId": "rescue_documents", "interactionPrompt": "E  Rescue documents from printer", "routeLabel": "Records Room",
+          "target": { "mode": "anchor", "anchorId": "office.fire.records" }, "bubbleOffset": [-280, 170] },
+        { "id": "open_window", "label": "Open the Window\nVentilate the office", "width": 420,
+          "interactionTargetId": "open_window", "interactionPrompt": "E  Open window", "routeLabel": "Office Window",
+          "target": { "mode": "anchor", "anchorId": "office.fire.window" }, "bubbleOffset": [270, 130] },
+        { "id": "raise_alarm", "label": "Shout \"Fire!\"\nGo to the entrance", "width": 420,
+          "interactionTargetId": "raise_alarm", "interactionPrompt": "E  Shout Fire! at the door", "routeLabel": "Entrance",
+          "target": { "mode": "anchor", "anchorId": "office.fire.entrance" }, "bubbleOffset": [280, 180] },
+        { "id": "unplug_strip", "label": "Unplug the Burning Power Strip\nFirst row · third desk · left side", "width": 480,
+          "interactionTargetId": "unplug_strip", "interactionPrompt": "E  Unplug power strip", "routeLabel": "Burning Power Strip",
+          "target": { "mode": "anchor", "anchorId": "office.fire.power_strip" }, "bubbleOffset": [-660, 30] }
+      ]
+    },
+    {
+      "id": "office_fire_no_extinguisher",
+      "correctOptionId": "evacuate_no_extinguisher",
+      "timeLimitSeconds": 45,
+      "numberedOptions": true,
+      "prompt": "2 / 3  ELECTRICAL FIRE\nThe strip is still energized. No suitable extinguisher is available.\nEveryone is alerted and the exit is clear. What now?",
+      "sources": [
+        { "title": "USFA - Choosing and Using Fire Extinguishers", "url": "https://www.usfa.fema.gov/prevention/home-fires/prepare-for-fire/fire-extinguishers/", "accessedOn": "2026-09-21" },
+        { "title": "OSHA - Portable Fire Extinguishers: Extinguisher Basics", "url": "https://www.osha.gov/etools/evacuation-plans-procedures/emergency-standards/portable-extinguishers/about", "accessedOn": "2026-09-21" }
+      ],
+      "instructor": {
+        "enabled": true,
+        "speaker": "INSTRUCTOR",
+        "videoPath": "Videos/office_fire_no_extinguisher.mp4",
+        "correct": {
+          "first": "Correct. With no suitable extinguisher, leave by the clear exit and call 911 from outside. Do not delay to collect belongings.",
+          "second": "Energized electrical equipment needs a Class C-rated agent. Water can conduct electricity. Never reach toward a burning plug. Let's review the lesson.",
+          "third": "USFA advises leaving when safe firefighting conditions are not met. Stay outside and follow responders' instructions. Evacuating does not put out the fire."
+        },
+        "incorrect": {
+          "first": "The safe answer is to evacuate and call 911 from outside. Opening a window, saving papers or approaching the burning strip delays escape.",
+          "second": "No extinguisher means you should not improvise a firefighting method. Never pour water on energized equipment. Let's review why safe evacuation comes first.",
+          "third": "Alert others, use the clear exit and stay outside. Leave electrical isolation and firefighting to trained responders when you cannot do them safely."
+        }
+      },
+      "options": [
+        { "id": "collect_records_first", "label": "Save Documents\nVisit the printer before leaving", "width": 450,
+          "interactionTargetId": "rescue_documents", "interactionPrompt": "E  Collect documents before leaving", "routeLabel": "Printer - collect documents",
+          "target": { "mode": "anchor", "anchorId": "office.fire.records" }, "bubbleOffset": [-280, 170] },
+        { "id": "ventilate_fire", "label": "Open the Window\nTry to clear the smoke", "width": 420,
+          "interactionTargetId": "open_window", "interactionPrompt": "E  Open window to clear smoke", "routeLabel": "Office Window",
+          "target": { "mode": "anchor", "anchorId": "office.fire.window" }, "bubbleOffset": [270, 130] },
+        { "id": "evacuate_no_extinguisher", "label": "Evacuate Now\nCall 911 from outside", "width": 420,
+          "interactionTargetId": "raise_alarm", "interactionPrompt": "E  Evacuate; call 911 once outside", "routeLabel": "Clear Exit - evacuate",
+          "target": { "mode": "anchor", "anchorId": "office.fire.entrance" }, "bubbleOffset": [280, 180] },
+        { "id": "reach_burning_plug", "label": "Unplug the Burning Strip\nReach in to cut its power", "width": 480,
+          "interactionTargetId": "unplug_strip", "interactionPrompt": "E  Reach for the burning plug", "routeLabel": "Burning Power Strip",
+          "target": { "mode": "anchor", "anchorId": "office.fire.power_strip" }, "bubbleOffset": [-660, 30] }
+      ]
+    },
+    {
+      "id": "office_damaged_strip",
+      "correctOptionId": "remove_damaged_strip",
+      "timeLimitSeconds": 45,
+      "numberedOptions": true,
+      "prompt": "3 / 3  AFTER THE FIRE\nResponders have cleared the office and isolated the power.\nThe cooled strip is visibly damaged. What should happen before reuse?",
+      "sources": [
+        { "title": "OSHA 29 CFR 1910.334(a)(2)(ii) - Use of equipment", "url": "https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.334", "accessedOn": "2026-09-21" },
+        { "title": "OSHA - Hospital-wide Hazards: Electrical Safety", "url": "https://www.osha.gov/etools/hospitals/hospital-wide-hazards/electrical-safety", "accessedOn": "2026-09-21" }
+      ],
+      "instructor": {
+        "enabled": true,
+        "speaker": "INSTRUCTOR",
+        "videoPath": "Videos/office_damaged_strip.mp4",
+        "correct": {
+          "first": "Correct. Keep the damaged strip out of service and report it. The fire is out, but damaged insulation or internal parts can still make reuse unsafe.",
+          "second": "OSHA 1910.334 requires damaged equipment that could cause injury to be removed from service. Necessary repairs and tests must make it safe before reuse. Let's review.",
+          "third": "In this drill, responders already cleared the area and isolated the power. In a real incident, do not re-enter or handle damaged equipment until it is safe and authorized."
+        },
+        "incorrect": {
+          "first": "Cooling down or clearing smoke does not make a damaged strip safe. Do not test it by reconnecting a printer, and do not leave it available for the next shift.",
+          "second": "OSHA requires unsafe damaged equipment to be taken out of service until the necessary repairs and safety tests are complete. Let's review how to prevent unsafe reuse.",
+          "third": "The correct action is to keep this strip out of service and report it for safe replacement. Electrical testing belongs to qualified personnel, not an improvised trial run."
+        }
+      },
+      "options": [
+        { "id": "test_with_printer", "label": "Resume Printing\nTest the strip with equipment", "width": 450,
+          "interactionTargetId": "rescue_documents", "interactionPrompt": "E  Try the printer on the damaged strip", "routeLabel": "Printer - trial use",
+          "target": { "mode": "anchor", "anchorId": "office.fire.records" }, "bubbleOffset": [-280, 170] },
+        { "id": "reuse_after_airing", "label": "Air Out the Room\nThen reuse the strip", "width": 440,
+          "interactionTargetId": "open_window", "interactionPrompt": "E  Air out room and approve reuse", "routeLabel": "Window - air out room",
+          "target": { "mode": "anchor", "anchorId": "office.fire.window" }, "bubbleOffset": [270, 130] },
+        { "id": "leave_unreported", "label": "Leave It for the Next Shift\nNo report or warning", "width": 450,
+          "interactionTargetId": "raise_alarm", "interactionPrompt": "E  Leave without reporting the damage", "routeLabel": "Exit - leave unreported",
+          "target": { "mode": "anchor", "anchorId": "office.fire.entrance" }, "bubbleOffset": [280, 180] },
+        { "id": "remove_damaged_strip", "label": "Keep It Out of Service\nReport it for safe replacement", "width": 480,
+          "interactionTargetId": "unplug_strip", "interactionPrompt": "E  Mark damaged strip out of service", "routeLabel": "Isolated Power Strip - report damage",
+          "target": { "mode": "anchor", "anchorId": "office.fire.power_strip" }, "bubbleOffset": [-660, 30] }
+      ]
+    },
+    {
+      "prompt": "Where would you go? Choose a location.",
+      "id": "office_choose_2",
+      "options": [
+        {
+          "bubbleOffset": [
+            -160,
+            165
+          ],
+          "width": 360,
+          "id": "exit",
+          "label": "Exit",
+          "target": {
+            "offset": [
+              0,
+              0.15,
+              0
+            ],
+            "anchorId": "office.exit",
+            "mode": "anchor"
+          }
+        },
+        {
+          "bubbleOffset": [
+            260,
+            170
+          ],
+          "width": 360,
+          "id": "reception",
+          "label": "Reception Desk",
+          "target": {
+            "offset": [
+              0,
+              0.15,
+              0
+            ],
+            "anchorId": "office.reception",
+            "mode": "anchor"
+          }
+        }
+      ]
+    },
+    {
+      "prompt": "Where would you go? Choose a location.",
+      "id": "office_choose_4",
+      "options": [
+        {
+          "bubbleOffset": [
+            -160,
+            165
+          ],
+          "width": 360,
+          "id": "exit",
+          "label": "Exit",
+          "target": {
+            "offset": [
+              0,
+              0.15,
+              0
+            ],
+            "anchorId": "office.exit",
+            "mode": "anchor"
+          }
+        },
+        {
+          "bubbleOffset": [
+            260,
+            170
+          ],
+          "width": 360,
+          "id": "reception",
+          "label": "Reception Desk",
+          "target": {
+            "offset": [
+              0,
+              0.15,
+              0
+            ],
+            "anchorId": "office.reception",
+            "mode": "anchor"
+          }
+        },
+        {
+          "bubbleOffset": [
+            -270,
+            85
+          ],
+          "width": 360,
+          "id": "manager",
+          "label": "Manager's Office",
+          "target": {
+            "offset": [
+              0,
+              0.15,
+              0
+            ],
+            "anchorId": "office.manager",
+            "mode": "anchor"
+          }
+        },
+        {
+          "bubbleOffset": [
+            240,
+            100
+          ],
+          "width": 360,
+          "id": "pantry",
+          "label": "Pantry",
+          "target": {
+            "offset": [
+              0,
+              0.15,
+              0
+            ],
+            "anchorId": "office.pantry",
+            "mode": "anchor"
+          }
+        }
+      ]
+    },
+    {
+      "prompt": "Where would you go? Choose a location.",
+      "id": "office_choose_6",
+      "options": [
+        {
+          "bubbleOffset": [
+            -160,
+            165
+          ],
+          "width": 360,
+          "id": "exit",
+          "label": "Exit",
+          "target": {
+            "offset": [
+              0,
+              0.15,
+              0
+            ],
+            "anchorId": "office.exit",
+            "mode": "anchor"
+          }
+        },
+        {
+          "bubbleOffset": [
+            260,
+            170
+          ],
+          "width": 360,
+          "id": "reception",
+          "label": "Reception Desk",
+          "target": {
+            "offset": [
+              0,
+              0.15,
+              0
+            ],
+            "anchorId": "office.reception",
+            "mode": "anchor"
+          }
+        },
+        {
+          "bubbleOffset": [
+            -270,
+            85
+          ],
+          "width": 360,
+          "id": "manager",
+          "label": "Manager's Office",
+          "target": {
+            "offset": [
+              0,
+              0.15,
+              0
+            ],
+            "anchorId": "office.manager",
+            "mode": "anchor"
+          }
+        },
+        {
+          "bubbleOffset": [
+            240,
+            100
+          ],
+          "width": 360,
+          "id": "pantry",
+          "label": "Pantry",
+          "target": {
+            "offset": [
+              0,
+              0.15,
+              0
+            ],
+            "anchorId": "office.pantry",
+            "mode": "anchor"
+          }
+        },
+        {
+          "bubbleOffset": [
+            -450,
+            55
+          ],
+          "width": 360,
+          "id": "workstation",
+          "label": "Workstation",
+          "target": {
+            "offset": [
+              0,
+              0.15,
+              0
+            ],
+            "anchorId": "office.workstation",
+            "mode": "anchor"
+          }
+        },
+        {
+          "bubbleOffset": [
+            -390,
+            150
+          ],
+          "width": 360,
+          "id": "lounge",
+          "label": "Reception Sofa",
+          "target": {
+            "offset": [
+              0,
+              0.15,
+              0
+            ],
+            "anchorId": "office.lounge",
+            "mode": "anchor"
+          }
+        }
+      ]
+    }
+  ],
+  "version": 1
+}

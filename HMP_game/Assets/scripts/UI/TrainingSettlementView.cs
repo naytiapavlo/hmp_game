@@ -9,6 +9,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
+using HMProtection.Presentation;
 
 namespace HMProtection.UI
 {
@@ -21,11 +22,17 @@ namespace HMProtection.UI
         public TMP_Text TimeText { get; private set; }
         public Button RetryButton { get; private set; }
         public Button MenuButton { get; private set; }
+        public SessionPresentationGate gate;
+        [SerializeField] SettlementPresentationConfig presentationConfig;
         GameObject overlay, fallbackSystem;
         CanvasGroup group;
         RectTransform presentation;
         TMP_Text summary, completion, coach;
+        TMP_Text reviewLabel;
+        TMP_Text reviewPageText;
+        RectTransform reviewCards;
         readonly List<TMP_Text> answerStatus = new List<TMP_Text>();
+        readonly List<TMP_Text> answerTitles = new List<TMP_Text>();
         readonly List<Image> answerStripes = new List<Image>();
         readonly Dictionary<Behaviour, bool> controls = new Dictionary<Behaviour, bool>();
         readonly Dictionary<GameObject, bool> hud = new Dictionary<GameObject, bool>();
@@ -34,6 +41,10 @@ namespace HMProtection.UI
         CursorLockMode previousLock;
         bool previousCursor;
         GameObject previousSelection;
+        IDisposable presentationLease;
+        ScoreBoard displayedScore;
+        int reviewPage;
+        const int ReviewsPerPage = 9;
         static readonly Color Muted = new Color(.63f, .68f, .74f);
         static readonly Color Green = new Color(.48f, .95f, .72f);
         static readonly Color Red = new Color(1f, .43f, .39f);
@@ -49,10 +60,12 @@ namespace HMProtection.UI
         {
             if (score == null || IsShowing) return;
             if (overlay == null) Build();
+            if (gate != null && !gate.TryAcquireModal(this, out presentationLease)) return;
             retry = onRetry; menu = onMenu; IsShowing = true;
+            bool gated = presentationLease != null;
             previousLock = Cursor.lockState; previousCursor = Cursor.visible;
             previousSelection = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
-            foreach (var root in gameObject.scene.GetRootGameObjects())
+            if (!gated) foreach (var root in gameObject.scene.GetRootGameObjects())
             {
                 foreach (var b in root.GetComponentsInChildren<Behaviour>(true))
                     if (b is body || b is Interactor || b is GuidanceSystem || b is FireEffectController)
@@ -70,23 +83,17 @@ namespace HMProtection.UI
                 fallbackSystem.SetActive(true);
             }
             EventSystem.current?.SetSelectedGameObject(null);
-            Cursor.lockState = CursorLockMode.None; Cursor.visible = true;
+            if (!gated) { Cursor.lockState = CursorLockMode.None; Cursor.visible = true; }
             CorrectText.text = score.CorrectCount + " / " + score.TotalQuestions;
             TimeText.text = FormatTime(score.TotalElapsedSeconds);
             completion.text = score.AskedCount.ToString("00") + " / " + score.TotalQuestions.ToString("00") + "  COMPLETED";
+            displayedScore = score; reviewPage = 0;
             summary.text = score.CorrectCount == score.TotalQuestions ? "EXCELLENT RESPONSE" : "KEEP BUILDING YOUR SKILLS";
             summary.color = score.CorrectCount == score.TotalQuestions ? Green : new Color(1f, .74f, .43f);
             coach.text = score.CorrectCount == score.TotalQuestions
-                ? "Great work. You made the right call in every scenario.\nKeep these decisions in mind when it matters."
-                : "Every decision is a chance to learn.\nReview the lessons and try again to build safer habits.";
-            for (int i = 0; i < answerStatus.Count; i++)
-            {
-                var answer = i < score.Answers.Count ? score.Answers[i] : null;
-                Color tint = answer == null ? Muted : answer.correct ? Green : Red;
-                answerStatus[i].text = answer == null ? "NOT ANSWERED" : (answer.timedOut ? "TIME OUT" : answer.correct ? "CORRECT" : "INCORRECT")
-                    + "  /  " + FormatTime(answer.elapsedSeconds);
-                answerStatus[i].color = tint; answerStripes[i].color = tint;
-            }
+                ? (presentationConfig != null ? presentationConfig.perfectCoach : "Great work. You made the right call in every scenario.\nKeep these decisions in mind when it matters.")
+                : (presentationConfig != null ? presentationConfig.practiceCoach : "Every decision is a chance to learn.\nReview the lessons and try again to build safer habits.");
+            RenderReviewPage();
             group.interactable = false; overlay.SetActive(true);
             entrance = StartCoroutine(Enter());
         }
@@ -124,7 +131,8 @@ namespace HMProtection.UI
             foreach (var item in hud) if (item.Key != null) item.Key.SetActive(item.Value);
             controls.Clear(); hud.Clear();
             if (fallbackSystem != null) fallbackSystem.SetActive(false);
-            Cursor.lockState = previousLock; Cursor.visible = previousCursor;
+            if (presentationLease == null) { Cursor.lockState = previousLock; Cursor.visible = previousCursor; }
+            presentationLease?.Dispose(); presentationLease = null;
             EventSystem.current?.SetSelectedGameObject(previousSelection != null && previousSelection.activeInHierarchy ? previousSelection : null);
             IsShowing = false; retry = menu = null;
         }
@@ -132,6 +140,7 @@ namespace HMProtection.UI
 
         void Build()
         {
+            var skin = presentationConfig;
             overlay = new GameObject("Training Settlement", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster), typeof(CanvasGroup));
             overlay.transform.SetParent(transform, false);
             var canvas = overlay.GetComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceOverlay; canvas.sortingOrder = 31080;
@@ -147,16 +156,16 @@ namespace HMProtection.UI
             var fit = stage.gameObject.AddComponent<AspectRatioFitter>(); fit.aspectMode = AspectRatioFitter.AspectMode.FitInParent; fit.aspectRatio = 16f / 9f;
             var reference = Rect("Reference", stage, 0, 0, 1920, 1080); reference.gameObject.AddComponent<InstructorLessonLayout>();
             presentation = Rect("Presentation", reference, 0, 0, 1920, 1080);
-            Text("Brand", presentation, 120, 991, 1200, 32, 20, "HM PROTECTION  /  OFFICE FIRE SAFETY").color = Muted;
-            Text("Title", presentation, 116, 900, 1360, 82, 64, "TRAINING COMPLETE").fontStyle = FontStyles.Bold;
+            Text("Brand", presentation, 120, 991, 1200, 32, 20, skin != null ? skin.brand : "HM PROTECTION  /  OFFICE FIRE SAFETY").color = Muted;
+            Text("Title", presentation, 116, 900, 1360, 82, 64, skin != null ? skin.title : "TRAINING COMPLETE").fontStyle = FontStyles.Bold;
             completion = Text("Completion", presentation, 1350, 927, 450, 36, 21, ""); completion.alignment = TextAlignmentOptions.MidlineRight; completion.color = Muted;
             Bar("Header Accent", presentation, 120, 874, 1680, 3, new Color(.65f, .08f, .1f));
 
             Panel("Instructor Card", presentation, 120, 279, 530, 562, true);
-            Artwork("HAIMO", presentation, "InstructorLesson/Instructor", 143, 281, 320, 573);
-            Artwork("Fire Safety Badge", presentation, "Settlement/FireSafetyBadge", 446, 644, 185, 185);
-            Text("Instructor Name", presentation, 454, 558, 165, 48, 29, "HAIMO").fontStyle = FontStyles.Bold;
-            Text("Instructor Role", presentation, 455, 503, 163, 59, 17, "YOUR SAFETY\nINSTRUCTOR").color = Muted;
+            Artwork("Instructor", presentation, skin != null ? skin.instructorArtworkResource : "InstructorLesson/Instructor", 143, 281, 320, 573);
+            Artwork("Safety Badge", presentation, skin != null ? skin.badgeArtworkResource : "Settlement/FireSafetyBadge", 446, 644, 185, 185);
+            Text("Instructor Name", presentation, 454, 558, 165, 48, 29, skin != null ? skin.instructorName : "HAIMO").fontStyle = FontStyles.Bold;
+            Text("Instructor Role", presentation, 455, 503, 163, 59, 17, skin != null ? skin.instructorRole : "YOUR SAFETY\nINSTRUCTOR").color = Muted;
 
             var scoreCard = Panel("Performance", presentation, 696, 497, 1104, 344, false);
             summary = Text("Summary", scoreCard, 43, 272, 1018, 35, 22, ""); summary.fontStyle = FontStyles.Bold;
@@ -167,22 +176,68 @@ namespace HMProtection.UI
             Bar("Divider", scoreCard, 550, 58, 2, 190, new Color(.27f, .29f, .33f));
             Text("Time Note", scoreCard, 44, 24, 1016, 36, 19, "Decisions + actions only. Videos, lessons and loading are excluded.").color = Muted;
 
-            Text("Review Label", presentation, 700, 432, 1080, 35, 20, "YOUR THREE DECISIONS").color = Muted;
-            string[] names = { "FIRST RESPONSE", "NO EXTINGUISHER", "DAMAGED EQUIPMENT" };
-            for (int i = 0; i < 3; i++)
-            {
-                var card = Panel("Question " + (i + 1), presentation, 696 + i * 375, 279, 354, 135, true);
-                answerStripes.Add(Bar("Result Accent", card, 22, 29, 3, 76, Muted));
-                Text("Question Title", card, 42, 76, 290, 32, 18, "0" + (i + 1) + "  " + names[i]).fontStyle = FontStyles.Bold;
-                answerStatus.Add(Text("Answer Status", card, 42, 28, 290, 38, 20, ""));
-            }
-
+            reviewLabel = Text("Review Label", presentation, 700, 432, 1080, 35, 20, "YOUR DECISIONS"); reviewLabel.color = Muted;
+            reviewCards = Rect("Review Cards", presentation, 696, 100, 1104, 314);
+            EnsureAnswerCards(0);
+            reviewPageText = Text("Review Page", presentation, 1500, 432, 180, 35, 16, ""); reviewPageText.alignment = TextAlignmentOptions.MidlineRight; reviewPageText.color = Muted;
+            Button("Previous Reviews", presentation, 1685, 428, 48, 34, "<", false, PreviousReviewPage);
+            Button("Next Reviews", presentation, 1738, 428, 48, 34, ">", false, NextReviewPage);
             coach = Text("Coach Note", presentation, 126, 150, 1668, 86, 29, "");
             coach.color = new Color(.83f, .86f, .90f);
             Text("Footer", presentation, 125, 63, 850, 38, 18, "PRACTICE TODAY. RESPOND WITH CONFIDENCE.").color = Muted;
             RetryButton = Button("Train Again", presentation, 1150, 50, 326, 76, "TRAIN AGAIN", true, () => Invoke(retry));
             MenuButton = Button("Main Menu", presentation, 1500, 50, 300, 76, "MAIN MENU", false, () => Invoke(menu));
             overlay.SetActive(false);
+        }
+
+        void EnsureAnswerCards(int count)
+        {
+            if (reviewCards == null || answerStatus.Count == count) return;
+            for (int i = reviewCards.childCount - 1; i >= 0; i--) Destroy(reviewCards.GetChild(i).gameObject);
+            answerStatus.Clear(); answerStripes.Clear(); answerTitles.Clear();
+            int columns = Mathf.Clamp(count, 1, 3);
+            float gap = 16f, cardWidth = (1104f - gap * (columns - 1)) / columns;
+            for (int i = 0; i < count; i++)
+            {
+                int column = i % columns, row = i / columns;
+                var card = Panel("Question " + (i + 1), reviewCards, column * (cardWidth + gap), 204 - row * 102, cardWidth, 92, true);
+                answerStripes.Add(Bar("Result Accent", card, 16, 17, 3, 56, Muted));
+                var title = Text("Question Title", card, 32, 49, cardWidth - 48, 26, 16, "QUESTION " + (i + 1).ToString("00")); title.fontStyle = FontStyles.Bold; answerTitles.Add(title);
+                answerStatus.Add(Text("Answer Status", card, 32, 15, cardWidth - 48, 30, 17, ""));
+            }
+
+        }
+
+        public void NextReviewPage()
+        {
+            if (displayedScore == null) return;
+            int pages = Mathf.Max(1, Mathf.CeilToInt(Mathf.Max(displayedScore.TotalQuestions, displayedScore.Answers.Count) / (float)ReviewsPerPage));
+            if (reviewPage + 1 < pages) { reviewPage++; RenderReviewPage(); }
+        }
+        public void PreviousReviewPage()
+        {
+            if (reviewPage > 0) { reviewPage--; RenderReviewPage(); }
+        }
+        void RenderReviewPage()
+        {
+            if (displayedScore == null) return;
+            int total = Mathf.Max(displayedScore.TotalQuestions, displayedScore.Answers.Count);
+            int pages = Mathf.Max(1, Mathf.CeilToInt(total / (float)ReviewsPerPage));
+            reviewPage = Mathf.Clamp(reviewPage, 0, pages - 1);
+            int start = reviewPage * ReviewsPerPage;
+            int shown = Mathf.Min(ReviewsPerPage, total - start);
+            EnsureAnswerCards(shown);
+            reviewLabel.text = "YOUR DECISIONS  /  " + total.ToString("00") + " QUESTIONS";
+            reviewPageText.text = pages > 1 ? "PAGE " + (reviewPage + 1) + " / " + pages : "";
+            for (int i = 0; i < shown; i++)
+            {
+                int index = start + i;
+                var answer = index < displayedScore.Answers.Count ? displayedScore.Answers[index] : null;
+                Color tint = answer == null ? Muted : answer.correct ? Green : Red;
+                answerStatus[i].text = answer == null ? "NOT ANSWERED" : (answer.timedOut ? "TIME OUT" : answer.correct ? "CORRECT" : "INCORRECT") + "  /  " + FormatTime(answer.elapsedSeconds);
+                answerTitles[i].text = answer == null ? "QUESTION " + (index + 1).ToString("00") : "QUESTION " + (index + 1).ToString("00") + "  " + answer.questionId;
+                answerStatus[i].color = tint; answerStripes[i].color = tint;
+            }
         }
         static RectTransform Rect(string name, Transform parent, float x, float y, float width, float height)
         {

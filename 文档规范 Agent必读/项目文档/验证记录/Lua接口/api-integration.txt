@@ -1,0 +1,3 @@
+PASS
+PASS JSON facade queries, native fire event relay, validation, API availability, request de-duplication and per-client timer/lease ownership
+PASS scope stop invalidates existing clients before same-ID rebuild; delayed callbacks cannot reach stopped clients

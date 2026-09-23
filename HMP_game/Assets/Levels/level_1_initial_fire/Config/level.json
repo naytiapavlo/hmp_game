@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "levelId": "level_1_initial_fire",
+  "displayName": "初起火灾应对",
+  "scene": "Scenes/level_1_initial_fire.unity",
+  "script": {
+    "enabled": true,
+    "entry": "Scripts/main.lua",
+    "config": "Config/flow.json"
+  },
+  "artRoots": [
+    "Art"
+  ],
+  "legacy": {
+    "enabled": false,
+    "configResource": ""
+  },
+  "initialFires": []
+}

@@ -1,0 +1,8 @@
+{
+  "name": "HMProtection.Fire.Tests",
+  "rootNamespace": "HMProtection.Tests.SharedModules.Fire",
+  "references": ["HMProtection.Fire"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "testAssemblies": true
+}

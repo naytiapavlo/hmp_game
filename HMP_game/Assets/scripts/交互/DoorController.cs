@@ -29,6 +29,9 @@ public class DoorController : MonoBehaviour, IInteractable
     private float targetAngle;  // 目标角度
 
     private bool Animating => Mathf.Abs(currentAngle - targetAngle) > 0.01f;
+    /// <summary>Semantic state for entity capabilities; the visual rotation remains owned here.</summary>
+    public bool IsAnimating => Animating;
+    public bool IsOpen => Mathf.Abs(targetAngle) > 0.5f;
 
     public string GetInteractPrompt(Interactor actor)
     {
@@ -38,12 +41,17 @@ public class DoorController : MonoBehaviour, IInteractable
 
     public void Interact(Interactor actor)
     {
-        if (Animating) return;
+        TrySetOpen(actor, !IsOpen);
+    }
 
-        // 交互手势：右手前推（开关门都是推的动作）
+    /// <summary>Accepts an open/close request once. The controller remains the sole owner of animation.</summary>
+    public bool TrySetOpen(Interactor actor, bool open)
+    {
+        if (Animating || IsOpen == open) return false;
+
         if (actor != null) actor.PlayHandGesture(HandPoseController.Pose.Push, 0.55f);
 
-        if (Mathf.Abs(targetAngle) > 0.5f) { targetAngle = 0f; return; } // 已开 → 关
+        if (!open) { targetAngle = 0f; return true; }
 
         // 开门：自由端朝远离交互者的一侧摆动。正角度下自由端的初始运动方向 =
         // up × (铰链→自由端)，与“铰链→玩家”同向时改用负角度即可反向。
@@ -52,6 +60,7 @@ public class DoorController : MonoBehaviour, IInteractable
         Vector3 toPlayer = HorizontalDir(actor != null ? actor.transform.position - hingeWorld : transform.forward);
         float d = Vector3.Dot(Vector3.Cross(Vector3.up, handleDir), toPlayer);
         targetAngle = (d > 0f ? -1f : 1f) * openAngle;
+        return true;
     }
 
     // 自由端参考点：离铰链最远的旋转部件（把手装在自由端）；没有部件时退回门板中心

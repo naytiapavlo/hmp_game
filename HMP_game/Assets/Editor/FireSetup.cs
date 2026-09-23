@@ -28,6 +28,8 @@ public static class FireSetup
     private const string IgnitionPointName = "起火点";
     private const string SocketAgedName = "SM_Hazard_OverloadSocket_01_Aged";
     private const string ShaderName = "HMProtection/ParticleFx";
+    private const string LegacyOfficeScene = "Assets/Scenes/办公室场景.unity";
+    private const string LegacyThirdScene = "Assets/Scenes/第三场景.unity";
 
     static FireSetup()
     {
@@ -41,6 +43,7 @@ public static class FireSetup
     {
         Scene scene = SceneManager.GetActiveScene();
         if (string.IsNullOrEmpty(scene.name)) return;
+        if (!IsLegacyOwnedScene(scene)) return;
         string markerPath = MarkerPathFor(scene);
         if (File.Exists(markerPath)) return;
         if (EditorApplication.isCompiling || EditorApplication.isUpdating) { EditorApplication.delayCall += Run; return; }
@@ -59,6 +62,8 @@ public static class FireSetup
         Debug.Log("FireSetup finished. scene=" + scene.name + " processed=" + processed
                   + " error=" + (error ?? "none") + " report=" + ReportPath);
     }
+
+    private static bool IsLegacyOwnedScene(Scene scene) => scene.path == LegacyOfficeScene || scene.path == LegacyThirdScene;
 
     [MenuItem("Tools/Fire/Re-run Fire Setup")]
     public static void ForceRerun()

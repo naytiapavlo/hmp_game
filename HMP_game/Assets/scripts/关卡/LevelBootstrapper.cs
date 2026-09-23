@@ -17,6 +17,8 @@ namespace HMProtection.Core
     [DisallowMultipleComponent]
     public sealed class LevelBootstrapper : MonoBehaviour
     {
+        public HMProtection.EntityAdapters.LevelSceneBindings entityBindings;
+        public HMProtection.EntityAdapters.LevelDefinition definition;
         [Tooltip("默认关卡 id：直开场景时用它。留空则按当前场景名在注册表里反查。")]
         [SerializeField] private string defaultLevelId = "level_1_initial_fire";
 
@@ -49,19 +51,60 @@ namespace HMProtection.Core
 
         private void Awake()
         {
+            if (HMProtection.Navigation.AppNavigationService.TryTakeDefinition(gameObject.scene.path, out var selected)) definition = selected;
+            // Package JSON may change legacy mode between authoring and playback.
+            if (definition != null && !definition.Validate(out var definitionError)) LastError = definitionError;
             runner = GetComponent<LevelFlowRunner>();
-            if (runner == null) runner = gameObject.AddComponent<LevelFlowRunner>();
+            if (runner == null && (definition == null || definition.runLegacyStages)) runner = gameObject.AddComponent<LevelFlowRunner>();
         }
 
         private void Start()
         {
-            if (autoStart) PrepareLevel();
+            if (autoStart && !PrepareLevel()) Debug.LogError("[LevelBoot] " + LastError, this);
         }
 
         /// <summary>解析配置 + 定位玩家 + 把配置交给引擎。返回是否成功。</summary>
         public bool PrepareLevel()
         {
             LastError = null;
+            Ready = false;
+            if (entityBindings != null) entityBindings.Bootstrapper = this;
+
+            if (definition != null)
+            {
+                if (!definition.Validate(out var definitionError)) { LastError = definitionError; return false; }
+                if (definition.scenePath != gameObject.scene.path)
+                { LastError = "Level definition scene does not match the loaded scene."; return false; }
+                Entry = new LevelEntry { id = definition.levelId, displayName = definition.displayName,
+                    sceneName = definition.scenePath, configPath = definition.legacyConfigPath };
+                if (definition.runLegacyStages)
+                {
+                    if (!ConfigLoader.TryLoadLevel(definition.legacyConfigPath, out var loaded, out definitionError))
+                    { LastError = definitionError; return false; }
+                    Config = loaded;
+                }
+                else Config = null;
+                entityBindings?.ApplyDefinition(definition);
+                if (entityBindings == null || !entityBindings.TryInitialize(Entry.id, out definitionError))
+                { LastError = definitionError ?? "A level definition requires explicit scene bindings."; return false; }
+                if (!definition.ApplyInitialState(entityBindings, out definitionError))
+                { LastError = definitionError; entityBindings.DisposeScope(); return false; }
+                ResolvePlayer();
+                if (player == null || (teleportPlayerToSpawn && !TryGetSpawnPosition(out _)))
+                {
+                    LastError = "Definition preparation requires a bound player and a valid spawn anchor.";
+                    entityBindings.DisposeScope();
+                    return false;
+                }
+                if (teleportPlayerToSpawn) TeleportPlayerToSpawn();
+                var sessionHost = entityBindings.GetComponent<HMProtection.EntityAdapters.LevelSessionHost>();
+                if (sessionHost == null || !sessionHost.TryStartLua(definition, out definitionError))
+                { LastError = definitionError ?? "Level session host is missing."; entityBindings.DisposeScope(); return false; }
+                Ready = true;
+                LevelPrepared?.Invoke(this);
+                if (definition.runLegacyStages && runner != null) runner.Begin(Entry, Config);
+                return true;
+            }
 
             if (!LevelCatalog.TryLoad(out LevelCatalog catalog, out string error))
             {
@@ -85,6 +128,13 @@ namespace HMProtection.Core
                 return false;
             }
             Config = config;
+
+            if (entityBindings != null && !entityBindings.TryInitialize(Entry.id, out error))
+            {
+                LastError = error;
+                Debug.LogError("[LevelBoot] Entity installation failed: " + error, this);
+                return false;
+            }
 
             ResolvePlayer();
             if (teleportPlayerToSpawn) TeleportPlayerToSpawn();
@@ -130,6 +180,7 @@ namespace HMProtection.Core
         public bool TryGetSpawnPosition(out Vector3 position)
         {
             position = Vector3.zero;
+            if (entityBindings != null) return entityBindings.TryRolePose("spawn", "origin", out position, out _);
             Transform anchor = ResolvePath(spawnAnchorPath);
             if (anchor == null) return false;
             position = anchor.position;
@@ -138,8 +189,16 @@ namespace HMProtection.Core
 
         private void ResolvePlayer()
         {
+            if (entityBindings != null) { player = entityBindings.Player; return; }
             if (player == null) player = FindAnyObjectByType<body>();
         }
+
+        public void ReleaseEntities()
+        {
+            Ready = false;
+            if (entityBindings != null) entityBindings.DisposeScope();
+        }
+        private void OnDestroy() => ReleaseEntities();
 
         /// <summary>把玩家挪到出生点。CharacterController 会跟直接写 transform 打架，因此先禁用再启用。</summary>
         public void TeleportPlayerToSpawn()

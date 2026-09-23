@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hmprotection.local/schemas/level.schema.json",
+  "title": "HM Protection Level Package v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "levelId", "displayName", "scene", "script", "artRoots", "legacy", "initialFires"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "levelId": { "type": "string", "pattern": "^[a-z0-9_-]+$" },
+    "displayName": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" },
+    "scene": { "$ref": "#/$defs/scenePath" },
+    "script": { "$ref": "#/$defs/script" },
+    "artRoots": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/artRoot" }
+    },
+    "legacy": { "$ref": "#/$defs/legacy" },
+    "initialFires": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/initialFire" }
+    }
+  },
+  "$defs": {
+    "safeRelativePath": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Use slash separators. The runtime parser additionally rejects absolute paths, Assets/, dot segments, backslash, colon, URI/reserved characters, controls, and trailing spaces or dots. Chinese path segments are allowed.",
+      "pattern": "^(?!/)(?!Assets(?:/|$)).+$"
+    },
+    "scenePath": {
+      "allOf": [
+        { "$ref": "#/$defs/safeRelativePath" },
+        { "pattern": "^Scenes/.+\\.unity$" }
+      ]
+    },
+    "scriptPath": {
+      "allOf": [
+        { "$ref": "#/$defs/safeRelativePath" },
+        { "pattern": "^Scripts/.+\\.lua$" }
+      ]
+    },
+    "artRoot": {
+      "allOf": [
+        { "$ref": "#/$defs/safeRelativePath" },
+        { "pattern": "^Art(?:/.+)?$" }
+      ]
+    },
+    "script": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "entry"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "entry": { "$ref": "#/$defs/scriptPath" },
+        "config": { "$ref": "#/$defs/scriptConfigPath" }
+      }
+    },
+    "scriptConfigPath": {
+      "allOf": [
+        { "$ref": "#/$defs/safeRelativePath" },
+        { "pattern": "^Config/.+\\.json$" }
+      ]
+    },
+    "legacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "configResource"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "configResource": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "enabled": { "const": true } } },
+          "then": { "properties": { "configResource": { "allOf": [{ "$ref": "#/$defs/safeRelativePath" }, { "minLength": 1 }] } } }
+        },
+        {
+          "if": { "properties": { "enabled": { "const": false } } },
+          "then": { "properties": { "configResource": { "anyOf": [{ "const": "" }, { "$ref": "#/$defs/safeRelativePath" }] } } }
+        }
+      ]
+    },
+    "initialFire": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entityId", "state"],
+      "properties": {
+        "entityId": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" },
+        "state": { "enum": ["None", "SmokeOnly", "Small", "Medium", "Large"] }
+      }
+    }
+  }
+}

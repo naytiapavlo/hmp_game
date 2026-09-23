@@ -1,0 +1,3 @@
+PASS all three packaged main.lua entry modules: new -> update -> stop disposes the client.
+Python 3.11 + lupa 2.8 (Lua 5.5), existing component_api with mock JSON host.
+Also passed the shared Lua wrapper contract checks. This is not a Unity Lua VM integration test.

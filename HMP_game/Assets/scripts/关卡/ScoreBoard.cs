@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using HMProtection.Modules.Score;
 
 namespace HMProtection.Core
 {
@@ -29,6 +30,8 @@ namespace HMProtection.Core
         public int PassCorrectCount = 3;
 
         private readonly List<AnswerRecord> answers = new List<AnswerRecord>();
+        private readonly ScoreLedger ledger = new ScoreLedger();
+        public ScoreLedger Ledger => ledger;
 
         /// <summary>已出题数（含超时未作答）。</summary>
         public int AskedCount => answers.Count;
@@ -79,7 +82,7 @@ namespace HMProtection.Core
             PassCorrectCount = passCorrectCount < 0 ? 0 : passCorrectCount;
         }
 
-        public void Reset() => answers.Clear();
+        public void Reset() { answers.Clear(); ledger.Clear(); }
 
         /// <summary>记录一次作答。optionId 为空表示超时未作答（按错误计，但不阻断流程）。</summary>
         public AnswerRecord Record(string questionId, string optionId, string correctOptionId,
@@ -89,14 +92,33 @@ namespace HMProtection.Core
                            && !string.IsNullOrEmpty(optionId)
                            && !string.IsNullOrEmpty(correctOptionId)
                            && string.Equals(optionId, correctOptionId, StringComparison.Ordinal);
+            // questionId is the legacy business key. Future QuestionSession callers may use attempt IDs
+            // through RecordAttempt; duplicate delivery must never award a second score.
+            if (!ledger.TryRecord(questionId, questionId, optionId, correct, timedOut, elapsedSeconds, out var entry, out _))
+            {
+                for (int i = 0; i < answers.Count; i++)
+                    if (string.Equals(answers[i].questionId, questionId, StringComparison.Ordinal)) return answers[i];
+                return null;
+            }
             var record = new AnswerRecord
             {
-                questionId = questionId,
-                optionId = optionId,
-                correct = correct,
-                timedOut = timedOut,
-                elapsedSeconds = elapsedSeconds,
+                questionId = entry != null ? entry.QuestionId : questionId,
+                optionId = entry != null ? entry.OptionId : optionId,
+                correct = entry != null && entry.Correct,
+                timedOut = entry != null && entry.TimedOut,
+                elapsedSeconds = entry != null ? entry.ElapsedSeconds : elapsedSeconds,
             };
+            answers.Add(record);
+            return record;
+        }
+
+        public AnswerRecord RecordAttempt(string attemptId, string questionId, string optionId, string correctOptionId,
+            float elapsedSeconds, bool timedOut)
+        {
+            bool correct = !timedOut && !string.IsNullOrEmpty(optionId) && string.Equals(optionId, correctOptionId, StringComparison.Ordinal);
+            if (!ledger.TryRecord(attemptId, questionId, optionId, correct, timedOut, elapsedSeconds, out var entry, out _))
+                return null;
+            var record = new AnswerRecord { questionId = entry.QuestionId, optionId = entry.OptionId, correct = entry.Correct, timedOut = entry.TimedOut, elapsedSeconds = entry.ElapsedSeconds };
             answers.Add(record);
             return record;
         }

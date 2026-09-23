@@ -14,6 +14,15 @@ EditorBuildSettings:
   - enabled: 1
     path: "Assets/Scenes/\u529E\u516C\u5BA4\u573A\u666F.unity"
     guid: ece4a5a3f31f5e349a3906ee90779a33
+  - enabled: 1
+    path: Assets/Levels/level_1_initial_fire/Scenes/level_1_initial_fire.unity
+    guid: aaceac10394ad204fa9bbb38462b3a87
+  - enabled: 1
+    path: Assets/Levels/third_scene_shared_modules_a/Scenes/third_scene_shared_modules_a.unity
+    guid: 58dd1b58558a02240a4e5156cdcd9726
+  - enabled: 1
+    path: Assets/Levels/third_scene_shared_modules_b/Scenes/third_scene_shared_modules_b.unity
+    guid: 8a307ef2b80c3644093171bdd23e6ad4
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

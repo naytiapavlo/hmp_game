@@ -17,6 +17,7 @@
 // 对应文档 6.5 交付物「连续演示四个分级」的验收手段。
 using UnityEngine;
 using UnityEngine.InputSystem;
+using HMProtection.Modules.Fire;
 
 public enum FireLevel { None, SmokeOnly, Small, Medium, Large }
 
@@ -24,6 +25,8 @@ public enum FireLevel { None, SmokeOnly, Small, Medium, Large }
 [ExecuteAlways]
 public class FireEffectController : MonoBehaviour
 {
+    [Header("通用会话（留空表示独立演示火源）")]
+    public HMProtection.EntityAdapters.LevelSessionHost sessionHost;
     [Header("分级预制体（FireSetup 自动接线）")]
     [SerializeField] private GameObject prefabSmokeOnly;
     [SerializeField] private GameObject prefabSmall;
@@ -40,7 +43,16 @@ public class FireEffectController : MonoBehaviour
     [SerializeField] private bool debugMode = true;
 
     /// <summary>当前火势分级</summary>
-    public FireLevel CurrentLevel { get; private set; } = FireLevel.None;
+    public FireLevel CurrentLevel => (FireLevel)Model.CurrentState;
+    /// <summary>The only state authority for this ignition source.</summary>
+    public FireStateModel Model
+    {
+        get
+        {
+            if (model == null) BindModel(new FireStateModel());
+            return model;
+        }
+    }
 
     /// <summary>当前分级实例（可能为 null）；供关卡状态机下发 intensity/scale/smokeAmount 三个 0-1 参数。
     /// 分级仍由 SetLevel 唯一决定（架构文档 §八：FireEffectController 只收「火势几级」），本属性只读。</summary>
@@ -58,11 +70,41 @@ public class FireEffectController : MonoBehaviour
     private bool frozen;
     private Renderer[] targetRenderers;
     private float lastDebugCycleTime = float.NegativeInfinity;
+    private FireStateModel model;
+
+    private void Awake() => _ = Model;
+
+    private void OnDestroy()
+    {
+        if (model == null) return;
+        model.StateChanged -= ProjectState;
+        model.VisualPressureChanged -= ProjectPressure;
+    }
+
+    /// <summary>Allows a level service to provide the per-fire model before play.</summary>
+    public void BindModel(FireStateModel value)
+    {
+        if (ReferenceEquals(model, value)) return;
+        if (model != null)
+        {
+            model.StateChanged -= ProjectState;
+            model.VisualPressureChanged -= ProjectPressure;
+        }
+        model = value ?? new FireStateModel();
+        model.StateChanged += ProjectState;
+        model.VisualPressureChanged += ProjectPressure;
+        ProjectState(model.CurrentState);
+    }
 
     /// <summary>切换火势分级（实例化对应预制体替换当前实例）</summary>
     public void SetLevel(FireLevel level)
     {
-        if (level == CurrentLevel) return;
+        Model.SetState((FireState)level);
+    }
+
+    private void ProjectState(FireState state)
+    {
+        FireLevel level = (FireLevel)state;
         if (currentInstance != null) Destroy(currentInstance.gameObject);
         currentInstance = null;
 
@@ -80,7 +122,6 @@ public class FireEffectController : MonoBehaviour
             currentInstance = go.GetComponent<FireVfx>();
             if (frozen && currentInstance != null) currentInstance.Freeze(true);
         }
-        CurrentLevel = level;
         Debug.Log("[Fire] 火势分级 → " + level, this);
     }
 
@@ -88,7 +129,26 @@ public class FireEffectController : MonoBehaviour
     public void SetFrozen(bool value)
     {
         frozen = value;
-        if (currentInstance != null) currentInstance.Freeze(value);
+        RefreshSimulationPause();
+    }
+
+    /// <summary>Session pause hook.  It freezes simulation and the current projection together.</summary>
+    public void SetSimulationPaused(bool value) => SetFrozen(value);
+
+    /// <summary>Called by the simulation driver so session leases gate fire logic too.</summary>
+    public void RefreshSimulationPause()
+    {
+        bool sessionBlocksSimulation = sessionHost != null
+            && sessionHost.IsBlocked(HMProtection.Sessions.ControlMask.Simulation);
+        Model.SetSimulationPaused(frozen || sessionBlocksSimulation);
+        if (currentInstance != null) currentInstance.Freeze(frozen || sessionBlocksSimulation);
+    }
+
+    private void ProjectPressure(float value, bool smoke)
+    {
+        if (currentInstance == null) return;
+        if (smoke) currentInstance.SetSmokeAmount(value);
+        else currentInstance.SetIntensity(value);
     }
 
     private void LateUpdate()
@@ -104,7 +164,11 @@ public class FireEffectController : MonoBehaviour
 
     private void Update()
     {
+        // Office fire sources may not have a FireSuppression driver. Keep their
+        // visual/session freeze contract current without advancing FireStateModel.
+        RefreshSimulationPause();
         if (!debugMode || !Application.isPlaying || HMProtection.UI.QuizLoadingOverlay.IsVisible) return;
+        if (sessionHost != null && sessionHost.IsBlocked(HMProtection.Sessions.ControlMask.Simulation)) return;
         Keyboard kb = Keyboard.current;
         if (kb == null || !kb.f9Key.wasPressedThisFrame) return;
         // 节流：wasPressedThisFrame 是按「输入更新」判定的，编辑器里同一次按键可能被连续多帧观测到，

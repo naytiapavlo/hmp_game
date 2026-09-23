@@ -1,0 +1,11 @@
+{
+  "name": "HMProtection.Sessions.Tests",
+  "rootNamespace": "HMProtection.Sessions.Tests",
+  "references": [
+    "HMProtection.Sessions",
+    "HMProtection.Entities"
+  ],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "testAssemblies": true
+}

@@ -24,6 +24,8 @@ public static class InteractionSetup
     private const string ReportPath = "Library/InteractionSetup.json";
     private const string LayerName = "Interactable";
     private const int PreferredLayerIndex = 6;
+    private const string LegacyOfficeScene = "Assets/Scenes/办公室场景.unity";
+    private const string LegacyThirdScene = "Assets/Scenes/第三场景.unity";
 
     // ---- 配置表：平开人行门（门板名）。
     //      出口双开门 SM_Door_EntryLeft/Right_01 不配置：培训中保持关闭，
@@ -108,6 +110,7 @@ public static class InteractionSetup
     {
         Scene scene = SceneManager.GetActiveScene();
         if (string.IsNullOrEmpty(scene.name)) return; // 未保存的临时场景不处理
+        if (!IsLegacyOwnedScene(scene)) return;
         string markerPath = MarkerPathFor(scene);
         if (File.Exists(markerPath)) return;
         if (EditorApplication.isCompiling || EditorApplication.isUpdating)
@@ -148,6 +151,8 @@ public static class InteractionSetup
         Debug.Log("InteractionSetup finished. scene=" + scene.name + " processed=" + processed + " error=" + (error ?? "none")
                   + " report=" + ReportPath);
     }
+
+    private static bool IsLegacyOwnedScene(Scene scene) => scene.path == LegacyOfficeScene || scene.path == LegacyThirdScene;
 
     [MenuItem("Tools/Interactable/Re-run Interaction Setup")]
     public static void ForceRerun()

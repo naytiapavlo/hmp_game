@@ -1,0 +1,19 @@
+{
+  "name": "HMProtection.LuaRuntime.Tests",
+  "rootNamespace": "HMProtection.LuaRuntime.Tests",
+  "references": [
+    "HMProtection.LuaRuntime"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "testAssemblies": true,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "Newtonsoft.Json.dll",
+    "nunit.framework.dll"
+  ]
+}

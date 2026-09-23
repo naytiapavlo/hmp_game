@@ -1,0 +1,4 @@
+PASS mock Lua component API
+Runtime: Python 3.11.9 + lupa 2.8 (Lua 5.5), temporary validation dependency only.
+Checks: string JSON transport, entity resolution, callback delivery, overflow reporting, callback error isolation, off-in-callback, recursive-update rejection, reserved topic rejection, disposal.
+This does not validate a Unity Lua runtime or IL2CPP/AOT binding.

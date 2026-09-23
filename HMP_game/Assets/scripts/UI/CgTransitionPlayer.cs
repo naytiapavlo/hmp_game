@@ -1,8 +1,8 @@
 using System.Collections;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using UnityEngine.Video;
+using HMProtection.Navigation;
 
 namespace HMProtection.UI
 {
@@ -41,11 +41,11 @@ namespace HMProtection.UI
         private bool canceled;
         private bool playbackEnded;
         private bool playbackFailed;
+        private NavigationOperation navigation;
 
         private void Awake()
         {
             if (canvasRoot == null) canvasRoot = gameObject;
-            SceneManager.sceneLoaded += OnSceneLoaded;
             if (videoPlayer != null)
             {
                 videoPlayer.loopPointReached += OnVideoEnded;
@@ -55,7 +55,7 @@ namespace HMProtection.UI
 
         private void OnDestroy()
         {
-            SceneManager.sceneLoaded -= OnSceneLoaded;
+            if (navigation != null) navigation.Changed -= OnNavigationChanged;
             if (videoPlayer != null)
             {
                 videoPlayer.loopPointReached -= OnVideoEnded;
@@ -71,19 +71,24 @@ namespace HMProtection.UI
             Debug.LogWarning("CG playback failed; continuing to Office: " + message, this);
         }
 
-        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        private void OnNavigationChanged(NavigationOperation operation)
         {
-            // 办公室激活后交给独立加载页，直到俯视题目准备完成。
-            if (playing && !canceled) sceneActivated = true;
+            if (!playing || canceled) return;
+            if (operation.State == NavigationState.Completed) sceneActivated = true;
+            else if (operation.State == NavigationState.Failed || operation.State == NavigationState.Cancelled)
+                CancelTransition();
         }
 
         /// <summary>是否具备播放条件（视频片段已配置）。</summary>
         public bool HasClip => videoPlayer != null && videoPlayer.clip != null;
 
         /// <summary>开始转场：闪黑 → 章节标题 → CG → 加载页；等待场景激活后交接给题目流程。</summary>
-        public void BeginCgTransition()
+        public void BeginCgTransition(NavigationOperation operation = null)
         {
             if (playing || !HasClip) return;
+            if (navigation != null) navigation.Changed -= OnNavigationChanged;
+            navigation = operation;
+            if (navigation != null) navigation.Changed += OnNavigationChanged;
             playing = true;
             // 先激活物体再开协程：未激活物体上的协程不会执行
             canvasRoot.SetActive(true);

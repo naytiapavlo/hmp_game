@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="20" result="Passed" total="20" passed="20" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-09-23 06:50:56Z" end-time="2026-09-23 06:50:56Z" duration="0.0918803">
+  <test-suite type="TestSuite" id="1000" name="HMP_game" fullname="HMP_game" runstate="Runnable" testcasecount="20" result="Passed" start-time="2026-09-23 06:50:56Z" end-time="2026-09-23 06:50:56Z" duration="0.091880" total="20" passed="20" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="1023" name="HMProtection.EntitySystem.Tests.dll" fullname="C:/Users/Administrator/Desktop/hmp/hmp_game/HMP_game/Temp/EntityValidationProject/Library/ScriptAssemblies/HMProtection.EntitySystem.Tests.dll" runstate="Runnable" testcasecount="20" result="Passed" start-time="2026-09-23 06:50:56Z" end-time="2026-09-23 06:50:56Z" duration="0.086309" total="20" passed="20" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="66576" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="1024" name="HMProtection" fullname="HMProtection" runstate="Runnable" testcasecount="20" result="Passed" start-time="2026-09-23 06:50:56Z" end-time="2026-09-23 06:50:56Z" duration="0.085668" total="20" passed="20" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1025" name="EntitySystem" fullname="HMProtection.EntitySystem" runstate="Runnable" testcasecount="20" result="Passed" start-time="2026-09-23 06:50:56Z" end-time="2026-09-23 06:50:56Z" duration="0.085247" total="20" passed="20" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="1026" name="Tests" fullname="HMProtection.EntitySystem.Tests" runstate="Runnable" testcasecount="20" result="Passed" start-time="2026-09-23 06:50:56Z" end-time="2026-09-23 06:50:56Z" duration="0.084833" total="20" passed="20" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestFixture" id="1001" name="EntityRegistryEditModeTests" fullname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests" classname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests" runstate="Runnable" testcasecount="20" result="Passed" start-time="2026-09-23 06:50:56Z" end-time="2026-09-23 06:50:56Z" duration="0.083786" total="20" passed="20" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1004" name="ActiveStateReportsInactiveAncestorWithoutActivatingIt" fullname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests.ActiveStateReportsInactiveAncestorWithoutActivatingIt" methodname="ActiveStateReportsInactiveAncestorWithoutActivatingIt" classname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests" runstate="Runnable" seed="148454372" result="Passed" start-time="2026-09-23 06:50:56Z" end-time="2026-09-23 06:50:56Z" duration="0.021042" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1018" name="AllCapabilitiesAttachBeforeAnyCapabilityPrepares" fullname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests.AllCapabilitiesAttachBeforeAnyCapabilityPrepares" methodname="AllCapabilitiesAttachBeforeAnyCapabilityPrepares" classname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests" runstate="Runnable" seed="1973131405" result="Passed" start-time="2026-09-23 06:50:56Z" end-time="2026-09-23 06:50:56Z" duration="0.010970" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1010" name="BindingChecksCapabilityKeyAndColliderMapsToExplicitTarget" fullname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests.BindingChecksCapabilityKeyAndColliderMapsToExplicitTarget" methodname="BindingChecksCapabilityKeyAndColliderMapsToExplicitTarget" classname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests" runstate="Runnable" seed="1904908410" result="Passed" start-time="2026-09-23 06:50:56Z" end-time="2026-09-23 06:50:56Z" duration="0.011322" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-suite type="ParameterizedMethod" id="1017" name="CapabilityExceptionsAreContainedAndRegistrationRollsBack" fullname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests.CapabilityExceptionsAreContainedAndRegistrationRollsBack" classname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-09-23 06:50:56Z" end-time="2026-09-23 06:50:56Z" duration="0.004187" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="1014" name="CapabilityExceptionsAreContainedAndRegistrationRollsBack(Validate)" fullname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests.CapabilityExceptionsAreContainedAndRegistrationRollsBack(Validate)" methodname="CapabilityExceptionsAreContainedAndRegistrationRollsBack" classname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests" runstate="Runnable" seed="41222182" result="Passed" start-time="2026-09-23 06:50:56Z" end-time="2026-09-23 06:50:56Z" duration="0.001465" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1015" name="CapabilityExceptionsAreContainedAndRegistrationRollsBack(Attach)" fullname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests.CapabilityExceptionsAreContainedAndRegistrationRollsBack(Attach)" methodname="CapabilityExceptionsAreContainedAndRegistrationRollsBack" classname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests" runstate="Runnable" seed="1719627255" result="Passed" start-time="2026-09-23 06:50:56Z" end-time="2026-09-23 06:50:56Z" duration="0.000292" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1016" name="CapabilityExceptionsAreContainedAndRegistrationRollsBack(Prepare)" fullname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests.CapabilityExceptionsAreContainedAndRegistrationRollsBack(Prepare)" methodname="CapabilityExceptionsAreContainedAndRegistrationRollsBack" classname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests" runstate="Runnable" seed="1585335780" result="Passed" start-time="2026-09-23 06:50:56Z" end-time="2026-09-23 06:50:56Z" duration="0.000221" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+              </test-suite>
+              <test-case id="1013" name="CrossOwnerActivationTargetAndSharedCapabilityAreRejected" fullname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests.CrossOwnerActivationTargetAndSharedCapabilityAreRejected" methodname="CrossOwnerActivationTargetAndSharedCapabilityAreRejected" classname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests" runstate="Runnable" seed="1210680584" result="Passed" start-time="2026-09-23 06:50:56Z" end-time="2026-09-23 06:50:56Z" duration="0.000778" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1019" name="DetachExceptionDuringRollbackIsLoggedAndCannotLeaveCandidateRegistered" fullname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests.DetachExceptionDuringRollbackIsLoggedAndCannotLeaveCandidateRegistered" methodname="DetachExceptionDuringRollbackIsLoggedAndCannotLeaveCandidateRegistered" classname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests" runstate="Runnable" seed="707628075" result="Passed" start-time="2026-09-23 06:50:56Z" end-time="2026-09-23 06:50:56Z" duration="0.008274" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[InvalidOperationException: detach
+HMProtection.EntitySystem.Tests.ThrowingDetachCapability.Detach () (at Assets/Tests/EntitySystem/EditMode/EntityRegistryEditModeTests.cs:457)
+HMProtection.Entities.EntityRegistry.Remove (HMProtection.Entities.EntityRegistry+Entry entry, System.Boolean notify) (at Assets/Framework/EntitySystem/Runtime/EntityRegistry.cs:190)
+UnityEngine.Debug:LogException(Exception)
+HMProtection.Entities.EntityRegistry:Remove(Entry, Boolean) (at Assets/Framework/EntitySystem/Runtime/EntityRegistry.cs:190)
+HMProtection.Entities.EntityRegistry:Rollback(List`1) (at Assets/Framework/EntitySystem/Runtime/EntityRegistry.cs:186)
+HMProtection.Entities.EntityRegistry:TryRegisterBatchCore(IReadOnlyList`1, Func`1, Action, IReadOnlyList`1&, EntityError&) (at Assets/Framework/EntitySystem/Runtime/EntityRegistry.cs:54)
+HMProtection.Entities.EntityRegistry:TryRegisterBatch(IReadOnlyList`1, IReadOnlyList`1&, EntityError&) (at Assets/Framework/EntitySystem/Runtime/EntityRegistry.cs:30)
+HMProtection.Entities.EntityRegistry:TryRegister(GameEntity, EntityHandle&, EntityError&) (at Assets/Framework/EntitySystem/Runtime/EntityRegistry.cs:26)
+HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests:DetachExceptionDuringRollbackIsLoggedAndCannotLeaveCandidateRegistered() (at Assets/Tests/EntitySystem/EditMode/EntityRegistryEditModeTests.cs:301)
+System.Reflection.MethodBase:Invoke(Object, Object[])
+NUnit.Framework.Internal.Reflect:InvokeMethod(MethodInfo, Object, Object[])
+NUnit.Framework.Internal.MethodWrapper:Invoke(Object, Object[])
+NUnit.Framework.Internal.Commands.TestMethodCommand:RunNonAsyncTestMethod(ITestExecutionContext)
+NUnit.Framework.Internal.Commands.TestMethodCommand:RunTestMethod(ITestExecutionContext)
+NUnit.Framework.Internal.Commands.TestMethodCommand:Execute(ITestExecutionContext)
+UnityEditor.EditorApplication:Internal_CallUpdateFunctions()
+
+]]></output>
+              </test-case>
+              <test-case id="1022" name="DisposeDetachesNewestRegistrationFirstAndRejectsDuplicateColliderWithinOneProxy" fullname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests.DisposeDetachesNewestRegistrationFirstAndRejectsDuplicateColliderWithinOneProxy" methodname="DisposeDetachesNewestRegistrationFirstAndRejectsDuplicateColliderWithinOneProxy" classname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests" runstate="Runnable" seed="1313793533" result="Passed" start-time="2026-09-23 06:50:56Z" end-time="2026-09-23 06:50:56Z" duration="0.001809" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1020" name="DuplicateColliderProxiesAreRejectedEvenForSameEntity" fullname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests.DuplicateColliderProxiesAreRejectedEvenForSameEntity" methodname="DuplicateColliderProxiesAreRejectedEvenForSameEntity" classname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests" runstate="Runnable" seed="1750625530" result="Passed" start-time="2026-09-23 06:50:56Z" end-time="2026-09-23 06:50:56Z" duration="0.000739" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1021" name="FacadeRejectsCommandsBeforeReadyAfterDisposeAndDuringDisposeCallbacks" fullname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests.FacadeRejectsCommandsBeforeReadyAfterDisposeAndDuringDisposeCallbacks" methodname="FacadeRejectsCommandsBeforeReadyAfterDisposeAndDuringDisposeCallbacks" classname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests" runstate="Runnable" seed="765869479" result="Passed" start-time="2026-09-23 06:50:56Z" end-time="2026-09-23 06:50:56Z" duration="0.001864" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1008" name="FailedDynamicRegistrationRollsBackOnlyTheCandidate" fullname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests.FailedDynamicRegistrationRollsBackOnlyTheCandidate" methodname="FailedDynamicRegistrationRollsBackOnlyTheCandidate" classname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests" runstate="Runnable" seed="1237335761" result="Passed" start-time="2026-09-23 06:50:56Z" end-time="2026-09-23 06:50:56Z" duration="0.000590" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1003" name="InitiallyInactiveEntityRemainsRegistered_AndFacadeCanEnableIt" fullname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests.InitiallyInactiveEntityRemainsRegistered_AndFacadeCanEnableIt" methodname="InitiallyInactiveEntityRemainsRegistered_AndFacadeCanEnableIt" classname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests" runstate="Runnable" seed="1410547931" result="Passed" start-time="2026-09-23 06:50:56Z" end-time="2026-09-23 06:50:56Z" duration="0.003520" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1005" name="InvalidRequiredBindingDoesNotAttachPrepareOrPublishRegistration" fullname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests.InvalidRequiredBindingDoesNotAttachPrepareOrPublishRegistration" methodname="InvalidRequiredBindingDoesNotAttachPrepareOrPublishRegistration" classname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests" runstate="Runnable" seed="262769816" result="Passed" start-time="2026-09-23 06:50:56Z" end-time="2026-09-23 06:50:56Z" duration="0.001532" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1009" name="RegisteredCallbackCannotSynchronouslyReenterRegistry" fullname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests.RegisteredCallbackCannotSynchronouslyReenterRegistry" methodname="RegisteredCallbackCannotSynchronouslyReenterRegistry" classname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests" runstate="Runnable" seed="1181339870" result="Passed" start-time="2026-09-23 06:50:56Z" end-time="2026-09-23 06:50:56Z" duration="0.000519" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1012" name="RegisteredEntityCannotBeReconfiguredAndInvalidContentIsRejected" fullname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests.RegisteredEntityCannotBeReconfiguredAndInvalidContentIsRejected" methodname="RegisteredEntityCannotBeReconfiguredAndInvalidContentIsRejected" classname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests" runstate="Runnable" seed="75454643" result="Passed" start-time="2026-09-23 06:50:56Z" end-time="2026-09-23 06:50:56Z" duration="0.001300" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1006" name="RegistrationPublishesOnlyAfterReadyAndContextResolvesDuringAttach" fullname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests.RegistrationPublishesOnlyAfterReadyAndContextResolvesDuringAttach" methodname="RegistrationPublishesOnlyAfterReadyAndContextResolvesDuringAttach" classname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests" runstate="Runnable" seed="1286382661" result="Passed" start-time="2026-09-23 06:50:56Z" end-time="2026-09-23 06:50:56Z" duration="0.000746" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1002" name="SameIdIsIsolatedByScope_AndDuplicateIsRejectedInsideOneScope" fullname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests.SameIdIsIsolatedByScope_AndDuplicateIsRejectedInsideOneScope" methodname="SameIdIsIsolatedByScope_AndDuplicateIsRejectedInsideOneScope" classname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests" runstate="Runnable" seed="2016391414" result="Passed" start-time="2026-09-23 06:50:56Z" end-time="2026-09-23 06:50:56Z" duration="0.000750" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1011" name="TenScopeReopensProduceFreshScopeIdsAndInvalidateEveryPriorHandle" fullname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests.TenScopeReopensProduceFreshScopeIdsAndInvalidateEveryPriorHandle" methodname="TenScopeReopensProduceFreshScopeIdsAndInvalidateEveryPriorHandle" classname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests" runstate="Runnable" seed="869781184" result="Passed" start-time="2026-09-23 06:50:56Z" end-time="2026-09-23 06:50:56Z" duration="0.000516" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1007" name="UnregisterThenReregisterInvalidatesOldHandle" fullname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests.UnregisterThenReregisterInvalidatesOldHandle" methodname="UnregisterThenReregisterInvalidatesOldHandle" classname="HMProtection.EntitySystem.Tests.EntityRegistryEditModeTests" runstate="Runnable" seed="180199084" result="Passed" start-time="2026-09-23 06:50:56Z" end-time="2026-09-23 06:50:56Z" duration="0.000404" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Saving results to: C:/Users/Administrator/AppData/LocalLow/DefaultCompany/HMP_game\TestResults.xml
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

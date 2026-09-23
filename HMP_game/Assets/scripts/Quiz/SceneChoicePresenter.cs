@@ -12,6 +12,8 @@ namespace HMProtection.Quiz
     {
         [Serializable] public sealed class ResultEvent : UnityEvent<SceneChoiceResult> { }
         public QuizViewController viewController;
+        public HMProtection.EntityAdapters.LevelSceneBindings entityBindings;
+        public TextAsset catalogAsset;
         public SceneChoiceBubble bubblePrefab;
         public Canvas canvas;
         public RectTransform bubbleContainer;
@@ -34,8 +36,17 @@ namespace HMProtection.Quiz
         public bool ReloadCatalog()
         {
             HideQuestion();
-            if (!SceneChoiceCatalog.TryLoad(out catalog, out string error)) return Fail(error);
+            string error;
+            bool loaded = catalogAsset != null
+                ? SceneChoiceCatalog.TryParse(catalogAsset.text, out catalog, out error)
+                : SceneChoiceCatalog.TryLoad(out catalog, out error);
+            if (!loaded) return Fail(error);
             LastError = null; return true;
+        }
+        public bool TryGetCatalog(out SceneChoiceCatalog value, out string error)
+        {
+            if (catalogAsset != null) return SceneChoiceCatalog.TryParse(catalogAsset.text, out value, out error);
+            return SceneChoiceCatalog.TryLoad(out value, out error);
         }
         public bool EnterOverview() { Subscribe(); return viewController != null && viewController.EnterOverview() || Fail("Overview camera is unavailable."); }
         public void ExitOverview() { HideQuestion(); if (viewController != null) viewController.ExitOverview(); }
@@ -47,11 +58,20 @@ namespace HMProtection.Quiz
             var q = catalog.Find(questionId);
             if (q == null) return Fail("Question not found: " + questionId);
             var anchors = new Dictionary<string, Transform>(StringComparer.Ordinal);
+            if (entityBindings == null)
             foreach (var root in gameObject.scene.GetRootGameObjects()) foreach (var a in root.GetComponentsInChildren<SceneChoiceAnchor>(true))
             {
                 if (string.IsNullOrWhiteSpace(a.anchorId) || !anchors.TryAdd(a.anchorId, a.transform)) return Fail("Empty or duplicate anchor ID: " + a.anchorId);
             }
-            foreach (var o in q.options) if (o.target.mode == "anchor" && !anchors.ContainsKey(o.target.anchorId)) return Fail(q.id + ": missing anchor " + o.target.anchorId);
+            foreach (var o in q.options)
+            {
+                if (o.target.mode != "anchor") continue;
+                if (entityBindings != null)
+                {
+                    if (!entityBindings.TryGetAnchorPosition(o.target.anchorId, out _, out var error)) return Fail(error);
+                }
+                else if (!anchors.ContainsKey(o.target.anchorId)) return Fail(q.id + ": missing anchor " + o.target.anchorId);
+            }
             if (!viewController.IsOverview) return Fail("Call EnterOverview before ShowQuestion.");
             CurrentQuestionId = q.id; canvas.gameObject.SetActive(true); promptLabel.text = q.prompt ?? "";
             Canvas.ForceUpdateCanvases();
@@ -61,7 +81,11 @@ namespace HMProtection.Quiz
             for (int i = 0; i < q.options.Length; i++)
             {
                 var o = q.options[i]; var b = pool.Count > 0 ? pool.Pop() : Instantiate(bubblePrefab, bubbleContainer);
-                b.Bind(o, o.target.mode == "anchor" ? anchors[o.target.anchorId] : null, i, Submit, q.numberedOptions); active.Add(b);
+                if (entityBindings != null && o.target.mode == "anchor")
+                    b.BindEntity(o, () => entityBindings.TryGetAnchorPosition(o.target.anchorId, out var position, out _) ? position : (Vector3?)null,
+                        i, Submit, q.numberedOptions);
+                else b.Bind(o, o.target.mode == "anchor" ? anchors[o.target.anchorId] : null, i, Submit, q.numberedOptions);
+                active.Add(b);
             }
             Canvas.ForceUpdateCanvases(); RefreshLayout(); Focus(); return true;
         }
@@ -94,7 +118,7 @@ namespace HMProtection.Quiz
             for (int i = 0; i < visible.Count; i++)
             {
                 var prev = visible[(i + visible.Count - 1) % visible.Count].button; var next = visible[(i + 1) % visible.Count].button;
-                visible[i].button.navigation = new Navigation { mode = Navigation.Mode.Explicit, selectOnUp = prev, selectOnLeft = prev, selectOnDown = next, selectOnRight = next };
+                visible[i].button.navigation = new UnityEngine.UI.Navigation { mode = UnityEngine.UI.Navigation.Mode.Explicit, selectOnUp = prev, selectOnLeft = prev, selectOnDown = next, selectOnRight = next };
             }
             if (!Submitted && visible.Count > 0 && EventSystem.current != null)
             {

@@ -1,0 +1,16 @@
+{
+  "name": "HMProtection.Sessions",
+  "rootNamespace": "HMProtection.Sessions",
+  "references": [
+    "HMProtection.Entities"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

@@ -1,0 +1,10 @@
+{
+  "name": "HMProtection.LevelPackages.Tests",
+  "rootNamespace": "HMProtection.LevelPackages.Tests",
+  "references": [
+    "HMProtection.LevelPackages"
+  ],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "testAssemblies": true
+}

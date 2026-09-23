@@ -10,10 +10,11 @@ using UnityEngine.InputSystem.Controls;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 using UnityEngine.Video;
+using HMProtection.Presentation;
 
 namespace HMProtection.Quiz
 {
-    /// <summary>Reusable, JSON-driven review: line 1, line 2, video, line 3.</summary>
+    /// <summary>Ordered text/video review with a compatible legacy four-step layout.</summary>
     [DisallowMultipleComponent]
     public sealed class InstructorLessonView : MonoBehaviour
     {
@@ -27,6 +28,7 @@ namespace HMProtection.Quiz
         public VideoPlayer Player => video;
         public event Action Closed;
         public event Action Closing;
+        public SessionPresentationGate gate;
 
         GameObject overlay, fallbackSystem;
         TMP_Text dialogue, status, progress, inputHint, outcome, screenKicker;
@@ -41,6 +43,9 @@ namespace HMProtection.Quiz
         RenderTexture videoTexture;
         InstructorLessonConfig config;
         InstructorDialogue lines;
+        readonly List<InstructorLessonStep> sequence = new List<InstructorLessonStep>();
+        int sequenceIndex;
+        string activeVideoPath;
         Coroutine playback;
         bool videoEnded, videoFailed;
         float inputAfter;
@@ -49,18 +54,35 @@ namespace HMProtection.Quiz
         GameObject oldSelection;
         readonly Dictionary<Behaviour, bool> controls = new Dictionary<Behaviour, bool>();
         readonly Dictionary<GameObject, bool> hud = new Dictionary<GameObject, bool>();
+        IDisposable presentationLease;
 
         public bool Show(InstructorLessonConfig lesson, bool correct)
         {
             if (IsShowing || !isActiveAndEnabled || lesson == null) return false;
             var branch = correct ? lesson.correct : lesson.incorrect;
-            if (branch == null) return false;
+            if (lesson.steps != null)
+                foreach (var item in lesson.steps)
+                    if (item == null || (item.kind != "line" && item.kind != "video")) return false;
+            if ((lesson.steps == null || lesson.steps.Length == 0) && branch == null) return false;
+            if (gate != null && !gate.TryAcquireModal(this, out presentationLease)) return false;
             if (overlay == null) BuildView();
             config = lesson; lines = branch; LastVideoError = null;
+            sequence.Clear(); sequenceIndex = 0;
+            if (lesson.steps != null && lesson.steps.Length > 0)
+                foreach (var item in lesson.steps) if (item != null && (item.kind == "line" || item.kind == "video")) sequence.Add(item);
+            if (sequence.Count == 0)
+            {
+                sequence.Add(new InstructorLessonStep { kind = "line", text = lines.first });
+                sequence.Add(new InstructorLessonStep { kind = "line", text = lines.second });
+                sequence.Add(new InstructorLessonStep { kind = "video", videoPath = lesson.videoPath });
+                sequence.Add(new InstructorLessonStep { kind = "line", text = lines.third });
+            }
+            if (sequence.Count == 0) { presentationLease?.Dispose(); presentationLease = null; return false; }
             IsShowing = true; IsClosing = false;
+            bool gated = presentationLease != null;
             oldLock = Cursor.lockState; oldCursor = Cursor.visible;
             oldSelection = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
-            foreach (var root in gameObject.scene.GetRootGameObjects())
+            if (!gated) foreach (var root in gameObject.scene.GetRootGameObjects())
             {
                 foreach (var b in root.GetComponentsInChildren<Behaviour>(true))
                     if (b is body || b is Interactor || b is GuidanceSystem || b is FireEffectController)
@@ -77,7 +99,7 @@ namespace HMProtection.Quiz
                 }
                 fallbackSystem.SetActive(true);
             }
-            Cursor.lockState = CursorLockMode.None; Cursor.visible = true;
+            if (!gated) { Cursor.lockState = CursorLockMode.None; Cursor.visible = true; }
             overlay.SetActive(true);
             EventSystem.current?.SetSelectedGameObject(null);
             outcome.text = correct ? "CORRECT  /  LET'S REVIEW" : "INCORRECT  /  LET'S LEARN";
@@ -86,17 +108,34 @@ namespace HMProtection.Quiz
             screenKicker.text = "FIRE SAFETY  /  FIELD NOTES";
             screenKicker.gameObject.SetActive(true);
             videoImage.gameObject.SetActive(false);
-            ShowLine(LessonStep.First);
+            ShowSequenceStep();
             entrance = StartCoroutine(AnimateEntrance());
             return true;
         }
 
-        void ShowLine(LessonStep step)
+        /// <summary>Plays every configured line/video step in order. Dismiss cancels the active sequence.</summary>
+        public bool ShowSteps(InstructorLessonStep[] steps)
         {
-            Step = step;
-            dialogue.text = step == LessonStep.First ? lines.first : step == LessonStep.Second ? lines.second : lines.third;
-            progress.text = step == LessonStep.First ? "01 / 03" : step == LessonStep.Second ? "02 / 03" : "03 / 03";
-            inputHint.text = step == LessonStep.Second ? "PRESS ANY KEY TO PLAY VIDEO" : step == LessonStep.Third ? "PRESS ANY KEY TO CONTINUE TRAINING" : "PRESS ANY KEY TO CONTINUE";
+            return Show(new InstructorLessonConfig { enabled = true, steps = steps }, true);
+        }
+
+        void ShowSequenceStep()
+        {
+            var item = sequence[sequenceIndex];
+            progress.text = (sequenceIndex + 1).ToString("00") + " / " + sequence.Count.ToString("00");
+            if (item.kind == "video")
+            {
+                Step = LessonStep.Video;
+                activeVideoPath = item.videoPath;
+                dialogue.text = "";
+                inputHint.text = "PRESS ANY KEY TO SKIP VIDEO";
+                playback = StartCoroutine(PlayVideo());
+                ResetInputGate();
+                return;
+            }
+            Step = sequenceIndex == 0 ? LessonStep.First : sequenceIndex == 1 ? LessonStep.Second : LessonStep.Third;
+            dialogue.text = item.text;
+            inputHint.text = sequenceIndex == sequence.Count - 1 ? "PRESS ANY KEY TO CONTINUE TRAINING" : "PRESS ANY KEY TO CONTINUE";
             if (lineTransition != null) StopCoroutine(lineTransition);
             lineTransition = StartCoroutine(AnimateLine());
             ResetInputGate();
@@ -107,21 +146,17 @@ namespace HMProtection.Quiz
             if (!IsShowing || IsClosing || Time.unscaledTime < inputAfter || lastAdvanceFrame == Time.frameCount) return;
             lastAdvanceFrame = Time.frameCount;
             ResetInputGate();
-            if (Step == LessonStep.First) ShowLine(LessonStep.Second);
-            else if (Step == LessonStep.Second)
-            {
-                Step = LessonStep.Video;
-                progress.text = "VIDEO REVIEW"; inputHint.text = "PRESS ANY KEY TO SKIP VIDEO";
-                playback = StartCoroutine(PlayVideo());
-            }
-            else if (Step == LessonStep.Video)
+            if (Step == LessonStep.Video)
             {
                 StopVideo();
-                status.text = "Keep the lesson\nin mind.";
-                screenKicker.text = "FIRE SAFETY  /  TAKE IT FORWARD"; screenKicker.gameObject.SetActive(true);
-                ShowLine(LessonStep.Third);
             }
-            else { IsClosing = true; Closing?.Invoke(); closing = StartCoroutine(AnimateExit()); }
+            AdvanceSequence();
+        }
+
+        void AdvanceSequence()
+        {
+            if (++sequenceIndex < sequence.Count) { ShowSequenceStep(); return; }
+            IsClosing = true; Closing?.Invoke(); closing = StartCoroutine(AnimateExit());
         }
 
         void ResetInputGate() { inputArmed = false; inputAfter = Time.unscaledTime + InputGuardSeconds; }
@@ -202,11 +237,11 @@ namespace HMProtection.Quiz
             status.text = "Preparing\nyour lesson...";
             screenKicker.text = "FIRE SAFETY  /  LESSON VIDEO";
             string path = null;
-            try { path = ResolveVideoPath(config.videoPath); }
+            try { path = ResolveVideoPath(activeVideoPath); }
             catch (Exception e) { LastVideoError = e.Message; }
             if (path == null || (Path.IsPathRooted(path) && !File.Exists(path)))
             {
-                VideoUnavailable(LastVideoError ?? "Video file has not been provided: " + config.videoPath);
+                VideoUnavailable(LastVideoError ?? "Video file has not been provided: " + activeVideoPath);
                 yield break;
             }
             CreateVideoPlayer();
@@ -241,12 +276,12 @@ namespace HMProtection.Quiz
             status.text = "LESSON COMPLETE";
             screenKicker.text = "FIRE SAFETY  /  TAKE IT FORWARD"; screenKicker.gameObject.SetActive(true);
             playback = null;
-            ShowLine(LessonStep.Third);
+            AdvanceSequence();
         }
 
         void VideoUnavailable(string reason)
         {
-            LastVideoError = reason; video.Stop(); videoImage.gameObject.SetActive(false);
+            LastVideoError = reason; if (video != null) video.Stop(); videoImage.gameObject.SetActive(false);
             status.text = "Lesson video is unavailable.\n\nYou can continue the review.";
             screenKicker.gameObject.SetActive(true);
             inputHint.text = "PRESS ANY KEY TO CONTINUE";
@@ -275,7 +310,8 @@ namespace HMProtection.Quiz
             foreach (var item in hud) if (item.Key != null) item.Key.SetActive(item.Value);
             controls.Clear(); hud.Clear();
             if (fallbackSystem != null) fallbackSystem.SetActive(false);
-            Cursor.lockState = oldLock; Cursor.visible = oldCursor;
+            if (presentationLease == null) { Cursor.lockState = oldLock; Cursor.visible = oldCursor; }
+            presentationLease?.Dispose(); presentationLease = null;
             EventSystem.current?.SetSelectedGameObject(oldSelection != null && oldSelection.activeInHierarchy ? oldSelection : null);
             IsShowing = false; IsClosing = false; inputArmed = false; Closed?.Invoke();
         }

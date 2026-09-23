@@ -1,0 +1,14 @@
+{
+  "name": "HMProtection.EntitySystem.Tests",
+  "rootNamespace": "HMProtection.EntitySystem.Tests",
+  "references": [
+    "HMProtection.Entities"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "testAssemblies": true
+}

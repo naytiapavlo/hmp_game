@@ -1,0 +1,15 @@
+{
+  "name": "HMProtection.SharedInteraction.Tests",
+  "rootNamespace": "HMProtection.SharedInteraction.Tests",
+  "references": [
+    "HMProtection.Interaction",
+    "HMProtection.Entities"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "testAssemblies": true
+}

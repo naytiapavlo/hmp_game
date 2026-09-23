@@ -23,6 +23,8 @@ using HMProtection.UI;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
+using HMProtection.EntityAdapters;
+using HMProtection.Modules.Fire;
 
 namespace HMProtection.Core
 {
@@ -69,13 +71,25 @@ namespace HMProtection.Core
         public bool IsFrozen { get; private set; }
 
         /// <summary>当前火焰分级（转发 FireEffectController）。</summary>
-        public FireLevel CurrentFireLevel => fire != null ? fire.CurrentLevel : FireLevel.None;
+        public FireLevel CurrentFireLevel => entityBindings != null
+            ? (entityBindings.TryGetFire(out var capability, out _) ? (FireLevel)capability.CurrentState : FireLevel.None)
+            : (fire != null ? fire.CurrentLevel : FireLevel.None);
 
         /// <summary>当前是否有火焰实例在场景里。</summary>
-        public bool HasFireInstance => fire != null && fire.HasFire;
+        public bool HasFireInstance => entityBindings != null
+            ? entityBindings.TryGetFire(out var capability, out _) && capability.HasEffect : fire != null && fire.HasFire;
 
         /// <summary>是否已经作答过（验收脚本用）。</summary>
         public bool QuizAnswered { get; private set; }
+
+        /// <summary>由关卡脚本选择并推进阶段时为 true。传统 Begin() 流程始终为 false。</summary>
+        public bool ScriptDriven { get; private set; }
+        /// <summary>脚本阶段的准备或执行协程仍在运行。</summary>
+        public bool ScriptStageBusy { get; private set; }
+        /// <summary>最后一个完整执行（Enter/Execute/Exit）的脚本阶段；未完成为 -1。</summary>
+        public int ScriptCompletedStage { get; private set; } = -1;
+        /// <summary>脚本阶段执行失败的原因；为空表示当前没有脚本阶段错误。</summary>
+        public string ScriptStageError { get; private set; }
 
         public event Action<StageDto> StageEntered;
         public event Action<StageDto> StageExited;
@@ -94,39 +108,90 @@ namespace HMProtection.Core
         private bool manualFireOverride;
         private OfficeChoiceInteraction pendingInteraction;
         private TrainingSettlementView settlement;
+        private OfficeEntityBindings entityBindings;
+        private IDisposable pauseLease, freezeLease, playerLease;
         private UnityEngine.Events.UnityAction<string, bool> pendingAnswer;
+        private bool scriptPrepared;
+        private bool scriptFailed;
+        private bool finishedNotified;
 
         // ==== 对外控制接口 ====
 
         /// <summary>开局：按配置的阶段序列跑一遍。由 LevelBootstrapper 调用。</summary>
         public void Begin(LevelEntry entry, LevelConfigDto config)
         {
-            if (settlement != null) settlement.Dismiss();
-            ClearPendingAnswer();
-            Entry = entry;
-            Config = config;
-            ResolveReferences();
-
-            Score.Configure(config.quiz != null ? config.quiz.totalQuestions : 4,
-                            config.quiz != null ? config.quiz.scorePerQuestion : 7.5f,
-                            config.quiz != null ? config.quiz.passCorrectCount : 3);
-            Score.Reset();
-            QuizAnswered = false;
-
-            StageIndex = -1;
-            stopRequested = false;
-            skipRequested = false;
-            waitingForContinue = false;
-            holdFrozen = false;
-            manualFireOverride = false;
-            IsPaused = false;
-
-            bool fromMenu = OfficeFireChoiceFlow.ConsumeEntryRequest();
-            Log("开局：" + (entry != null ? entry.id : "(no entry)")
-                + "　入口=" + (fromMenu ? "主菜单选场景" : "直接 Play 场景（开发/验收）"));
-
+            ScriptDriven = false;
+            if (!InitializeFlow(entry, config, out _)) return;
             if (routine != null) StopCoroutine(routine);
             routine = StartCoroutine(RunStages());
+        }
+
+        /// <summary>
+        /// 初始化脚本编排流程。它与 Begin 使用同一套场景接线、计分和状态复位，
+        /// 但不会自行遍历 stages；调用方在准备完成后逐段调用 TryRunScriptStage。
+        /// </summary>
+        public bool TryPrepareScript(LevelEntry entry, LevelConfigDto config, out string error)
+        {
+            ScriptDriven = true;
+            if (!InitializeFlow(entry, config, out error))
+            {
+                ScriptDriven = false;
+                return false;
+            }
+
+            if (routine != null) StopCoroutine(routine);
+            scriptPrepared = false;
+            ScriptStageBusy = true;
+            IsRunning = true;
+            routine = StartCoroutine(PrepareScriptRoutine());
+            return true;
+        }
+
+        /// <summary>在脚本已准备好后执行一个配置阶段，不会自动进入下一阶段。</summary>
+        public bool TryRunScriptStage(int index, out string error)
+        {
+            error = null;
+            if (!ScriptDriven) { error = "LevelFlowRunner is not in script-driven mode."; return false; }
+            if (scriptFailed) { error = ScriptStageError ?? "The script flow has already failed."; return false; }
+            if (!IsRunning) { error = "The script flow is not running."; return false; }
+            if (!scriptPrepared) { error = "The script flow is still preparing its loading/CG transition."; return false; }
+            if (ScriptStageBusy) { error = "Another script stage is already running."; return false; }
+            if (index != ScriptCompletedStage + 1)
+            { error = "Script stages must run in order; expected " + (ScriptCompletedStage + 1) + " but got " + index + "."; return false; }
+            if (Config?.stages == null || index < 0 || index >= Config.stages.Length || Config.stages[index] == null)
+            { error = "Invalid script stage index: " + index; return false; }
+
+            StageIndex = index;
+            ScriptStageBusy = true;
+            ScriptStageError = null;
+            routine = StartCoroutine(RunScriptStage(index, Config.stages[index]));
+            return true;
+        }
+
+        /// <summary>正常结束脚本流程。已展示的结算面板不会被关闭。</summary>
+        public void CompleteScriptFlow()
+        {
+            if (!ScriptDriven) return;
+            if (routine != null) { StopCoroutine(routine); routine = null; }
+            ScriptStageBusy = false;
+            scriptPrepared = false;
+            Finish();
+        }
+
+        /// <summary>取消脚本流程并释放流程自身取得的控制、计时和呈现状态；不释放实体 Session。</summary>
+        public void CancelScriptFlow()
+        {
+            if (!ScriptDriven) return;
+            stopRequested = true;
+            waitingForContinue = false;
+            if (routine != null) { StopCoroutine(routine); routine = null; }
+            if (quizFlow != null) quizFlow.CancelQuestion();
+            if (guidance != null) { guidance.OnDestinationReached -= OnGuidanceDestinationReached; guidance.HideRoute(); }
+            if (quizFlow != null) quizFlow.GetComponent<OfficeChoiceInteraction>()?.CancelPresentation();
+            if (settlement != null) settlement.Dismiss();
+            ScriptStageBusy = false;
+            scriptPrepared = false;
+            Finish(false);
         }
 
         /// <summary>暂停/继续：暂停期间火焰与计时一起停（计划书 §6.3）。</summary>
@@ -134,6 +199,11 @@ namespace HMProtection.Core
         {
             if (IsPaused == paused) return;
             IsPaused = paused;
+            pauseLease?.Dispose(); pauseLease = null;
+            if (paused && entityBindings != null && entityBindings.sessionHost != null)
+                pauseLease = entityBindings.sessionHost.Acquire(this, HMProtection.Sessions.ControlMask.Simulation
+                    | HMProtection.Sessions.ControlMask.Movement | HMProtection.Sessions.ControlMask.Look
+                    | HMProtection.Sessions.ControlMask.Interaction | HMProtection.Sessions.ControlMask.ToolUse);
             RefreshFrozen();
             Log(paused ? "暂停" : "继续");
         }
@@ -185,15 +255,18 @@ namespace HMProtection.Core
             waitingForContinue = false;
             if (routine != null) { StopCoroutine(routine); routine = null; }
             if (quizFlow != null) quizFlow.CancelQuestion();
-            Finish();
+            if (guidance != null) { guidance.OnDestinationReached -= OnGuidanceDestinationReached; guidance.HideRoute(); }
+            if (quizFlow != null) quizFlow.GetComponent<OfficeChoiceInteraction>()?.CancelPresentation();
+            Finish(!ScriptDriven);
+            GetComponent<LevelBootstrapper>()?.ReleaseEntities();
         }
 
         /// <summary>手动循环火势分级——计划书 §6.5 验收：None→SmokeOnly→Small→Medium→Large。
         /// 下次阶段切换时自动交还给引擎（引擎始终是唯一权威下发方）。</summary>
         public void CycleFireLevel()
         {
-            if (fire == null) return;
-            FireLevel next = fire.CurrentLevel switch
+            if (entityBindings == null && fire == null) return;
+            FireLevel next = CurrentFireLevel switch
             {
                 FireLevel.None => FireLevel.SmokeOnly,
                 FireLevel.SmokeOnly => FireLevel.Small,
@@ -201,12 +274,146 @@ namespace HMProtection.Core
                 FireLevel.Medium => FireLevel.Large,
                 _ => FireLevel.None,
             };
-            fire.SetLevel(next);
+            if (!SetFireLevel(next)) return;
             manualFireOverride = true;
             Log("[验收] 手动火势分级 → " + next + "（下次阶段切换时交还引擎）");
         }
 
         // ==== 阶段序列执行 ====
+
+        private bool InitializeFlow(LevelEntry entry, LevelConfigDto config, out string error)
+        {
+            error = null;
+            if (settlement != null) settlement.Dismiss();
+            ClearPendingAnswer();
+            Entry = entry;
+            Config = config;
+            if (config == null)
+            {
+                error = "Level configuration is missing.";
+                IsRunning = false;
+                return false;
+            }
+            if (!ResolveReferences())
+            {
+                error = "Level scene references are not ready.";
+                IsRunning = false;
+                return false;
+            }
+
+            Score.Configure(config.quiz != null ? config.quiz.totalQuestions : 4,
+                            config.quiz != null ? config.quiz.scorePerQuestion : 7.5f,
+                            config.quiz != null ? config.quiz.passCorrectCount : 3);
+            Score.Reset();
+            QuizAnswered = false;
+            StageIndex = -1;
+            stopRequested = false;
+            skipRequested = false;
+            waitingForContinue = false;
+            holdFrozen = false;
+            manualFireOverride = false;
+            IsPaused = false; pauseLease?.Dispose(); pauseLease = null;
+            freezeLease?.Dispose(); freezeLease = null;
+            playerLease?.Dispose(); playerLease = null;
+            IsFrozen = false;
+            ScriptCompletedStage = -1;
+            ScriptStageError = null;
+            ScriptStageBusy = false;
+            scriptPrepared = false;
+            scriptFailed = false;
+            finishedNotified = false;
+
+            bool fromMenu = OfficeFireChoiceFlow.ConsumeEntryRequest();
+            Log("开局：" + (entry != null ? entry.id : "(no entry)")
+                + "　入口=" + (fromMenu ? "主菜单选场景" : "直接 Play 场景（开发/验收）"));
+            return true;
+        }
+
+        private IEnumerator PrepareScriptRoutine()
+        {
+            try { yield return ExecuteSafely(PrepareScriptWork()); }
+            finally
+            {
+                if (!scriptFailed) { ScriptStageBusy = false; routine = null; }
+            }
+        }
+
+        private IEnumerator PrepareScriptWork()
+        {
+            QuizLoadingOverlay.Show();
+            float cgWaitStart = Time.realtimeSinceStartup;
+            while (FindAnyObjectByType<CgTransitionPlayer>() != null)
+            {
+                if (Time.realtimeSinceStartup - cgWaitStart > 60f)
+                {
+                    Warn("等待 CG 转场超过 60s，直接开局");
+                    break;
+                }
+                yield return null;
+            }
+            yield return null;
+            QuizLoadingOverlay.SetProgress(.2f, "Preparing the training environment...");
+            scriptPrepared = true;
+        }
+
+        private IEnumerator RunScriptStage(int index, StageDto stage)
+        {
+            try
+            {
+                yield return ExecuteSafely(ExecuteScriptStage(stage));
+                if (scriptFailed || stopRequested) yield break;
+                ScriptCompletedStage = index;
+                skipRequested = false;
+            }
+            finally
+            {
+                if (!scriptFailed) { ScriptStageBusy = false; routine = null; }
+            }
+        }
+
+        private IEnumerator ExecuteScriptStage(StageDto stage)
+        {
+            EnterStage(stage);
+            yield return ExecuteStage(stage);
+            if (scriptFailed || stopRequested) yield break;
+            ExitStage(stage);
+        }
+
+        // Unity normally logs nested IEnumerator exceptions outside this component.  Script-driven
+        // flows must return them through ScriptStageError instead, so unwrap each nested iterator here.
+        private IEnumerator ExecuteSafely(IEnumerator root)
+        {
+            var stack = new Stack();
+            if (root != null) stack.Push(root);
+            while (stack.Count > 0)
+            {
+                var current = (IEnumerator)stack.Peek();
+                object yielded;
+                bool moved;
+                Exception failure = null;
+                try { moved = current.MoveNext(); yielded = moved ? current.Current : null; }
+                catch (Exception exception)
+                {
+                    moved = false;
+                    yielded = null;
+                    failure = exception;
+                }
+                if (failure != null) { FailScriptFlow("Script stage coroutine failed: " + failure.Message); break; }
+                if (!moved) { stack.Pop(); continue; }
+                if (yielded is IEnumerator nested) { stack.Push(nested); continue; }
+                yield return yielded;
+                if (scriptFailed || stopRequested) yield break;
+            }
+        }
+
+        private void FailScriptFlow(string error)
+        {
+            if (scriptFailed) return;
+            scriptFailed = true;
+            ScriptStageError = error;
+            Debug.LogError("[LevelFlow] " + error, this);
+            CancelScriptFlow();
+        }
 
         private IEnumerator RunStages()
         {
@@ -269,29 +476,63 @@ namespace HMProtection.Core
             if (settlement == null) settlement = GetComponent<TrainingSettlementView>();
             if (settlement == null) settlement = gameObject.AddComponent<TrainingSettlementView>();
             QuizLoadingOverlay.SetProgress(.95f, "Your session report is ready");
-            settlement.Show(Score, () => Begin(Entry, Config), () => StartCoroutine(ReturnToMenu()));
+            settlement.Show(Score, RestartLevel, () => StartCoroutine(ReturnToMenu()));
             yield return QuizLoadingOverlay.Reveal();
         }
 
         private IEnumerator ReturnToMenu()
         {
-            const string menuPath = "Assets/Scenes/初始界面.unity";
-            if (!Application.CanStreamedLevelBeLoaded(menuPath))
+            string menuPath = GetComponent<LevelBootstrapper>()?.definition?.menuScenePath ?? "Assets/Scenes/初始界面.unity";
+            if (!HMProtection.Navigation.AppNavigationService.Instance.TryLoadSingle(menuPath, out var operation, out var error))
             {
-                Debug.LogError("Main menu is not in the build scene list.");
-                settlement.Dismiss();
-                settlement.Show(Score, () => Begin(Entry, Config), () => StartCoroutine(ReturnToMenu()));
+                Warn(error);
                 yield break;
             }
             StopLevel();
             QuizLoadingOverlay.Show("RETURNING TO MAIN MENU");
-            yield return null;
-            var operation = SceneManager.LoadSceneAsync(menuPath, LoadSceneMode.Single);
-            while (!operation.isDone)
+            // The persistent navigation service owns activation and completion after this scene is destroyed.
+            operation.Changed += HideNavigationOverlay;
+            operation.AllowActivation();
+            while (!operation.IsTerminal)
             {
-                QuizLoadingOverlay.SetProgress(Mathf.Clamp01(operation.progress / .9f), "Loading the main menu...");
+                QuizLoadingOverlay.SetProgress(operation.Progress, "Loading the main menu...");
                 yield return null;
             }
+        }
+
+        public void RestartLevel()
+        {
+            if (entityBindings == null) { Begin(Entry, Config); return; }
+            string scenePath = gameObject.scene.path;
+            if (string.IsNullOrEmpty(scenePath)) { Warn("Save the entity pilot scene before restarting it."); return; }
+            StartCoroutine(ReloadEntityScene(scenePath));
+        }
+
+        private IEnumerator ReloadEntityScene(string scenePath)
+        {
+            if (!HMProtection.Navigation.AppNavigationService.Instance.TryLoadSingle(scenePath, out var operation, out var error))
+            {
+                Warn("Could not reload the entity scene: " + error);
+                yield break;
+            }
+            StopLevel();
+            QuizLoadingOverlay.Show("RESTARTING TRAINING");
+            // The destination bootstrapper takes over the cover until its first playable stage is ready.
+            operation.Changed += HideFailedNavigationOverlay;
+            operation.AllowActivation();
+            while (!operation.IsTerminal) yield return null;
+        }
+        private static void HideNavigationOverlay(HMProtection.Navigation.NavigationOperation operation)
+        {
+            if (!operation.IsTerminal) return;
+            operation.Changed -= HideNavigationOverlay;
+            QuizLoadingOverlay.Hide();
+        }
+        private static void HideFailedNavigationOverlay(HMProtection.Navigation.NavigationOperation operation)
+        {
+            if (!operation.IsTerminal) return;
+            operation.Changed -= HideFailedNavigationOverlay;
+            if (operation.State != HMProtection.Navigation.NavigationState.Completed) QuizLoadingOverlay.Hide();
         }
 
         private void EnterStage(StageDto stage)
@@ -365,6 +606,7 @@ namespace HMProtection.Core
                 yield return null;
             if (!quizFlow.IsQuestionActive)
             {
+                if (ScriptDriven) throw new InvalidOperationException("Question presentation failed: " + quizFlow.LastError);
                 Warn("答题段没能打开：" + (string.IsNullOrEmpty(quizFlow.LastError) ? "(无错误信息)" : quizFlow.LastError));
                 yield break;
             }
@@ -435,7 +677,11 @@ namespace HMProtection.Core
             {
                 bool timedOut = interaction.timer != null && interaction.timer.HasFired;
                 float elapsed = interaction.timer != null ? interaction.timer.ElapsedSeconds : Time.realtimeSinceStartup - startedAt;
-                var record = Score.Record(questionId, quizFlow.LastSelectedOption, correctId, elapsed, timedOut);
+                string attemptId = interaction.timer != null ? interaction.timer.AttemptId : null;
+                var record = string.IsNullOrEmpty(attemptId)
+                    ? Score.Record(questionId, option, correctId, elapsed, timedOut)
+                    : Score.RecordAttempt(attemptId, questionId, option, correctId, elapsed, timedOut);
+                if (record == null) return;
                 record.correct = correct && !timedOut;
                 QuizAnswered = true;
                 ClearPendingAnswer();
@@ -448,7 +694,13 @@ namespace HMProtection.Core
             if (pendingInteraction != null && pendingAnswer != null) pendingInteraction.onActionCompleted.RemoveListener(pendingAnswer);
             pendingInteraction = null; pendingAnswer = null;
         }
-        private void OnDestroy() => ClearPendingAnswer();
+        private void OnDestroy()
+        {
+            pauseLease?.Dispose(); freezeLease?.Dispose(); playerLease?.Dispose();
+            ClearPendingAnswer();
+            if (guidance != null) guidance.OnDestinationReached -= OnGuidanceDestinationReached;
+            if (entityBindings != null) entityBindings.DisposeScope();
+        }
 
         /// <summary>解说 +（可选）等待「继续」：期间火焰与计时一起冻结（计划书 §2 / §6.3）。</summary>
         private IEnumerator Narration()
@@ -550,10 +802,10 @@ namespace HMProtection.Core
         /// <summary>按 cue id 下发火势分级；可选同时下发 intensity/scale/smokeAmount。</summary>
         public void ApplyFire(string cueId, string reason)
         {
-            if (fire == null) return;
+            if (entityBindings == null && fire == null) return;
             if (string.IsNullOrEmpty(cueId))
             {
-                Log("[火势] " + reason + "：未配 cue，保持当前分级 " + fire.CurrentLevel);
+                Log("[火势] " + reason + "：未配 cue，保持当前分级 " + CurrentFireLevel);
                 return;
             }
             FireCueDto cue = FindCue(cueId);
@@ -564,19 +816,31 @@ namespace HMProtection.Core
             }
 
             FireLevel level = ParseFireLevel(cue.level);
-            fire.SetLevel(level);
+            if (!SetFireLevel(level)) return;
             if (cue.useVfxParams)
             {
-                FireVfx vfx = fire.CurrentVfx;
-                if (vfx != null)
+                if (entityBindings != null)
                 {
-                    vfx.SetIntensity(cue.intensity);
-                    vfx.SetScale(cue.scale);
-                    vfx.SetSmokeAmount(cue.smokeAmount);
+                    if (entityBindings.TryGetFire(out var capability, out var error))
+                    { if (!capability.TrySetVisualParameters(cue.intensity, cue.scale, cue.smokeAmount, out error)) Warn(error); }
+                    else Warn(error);
+                }
+                else
+                {
+                    FireVfx vfx = fire.CurrentVfx;
+                    if (vfx != null) { vfx.SetIntensity(cue.intensity); vfx.SetScale(cue.scale); vfx.SetSmokeAmount(cue.smokeAmount); }
                 }
             }
             Log("[火势] " + reason + " → " + level + "（cue " + cue.id + "，实例 "
-                + (fire.HasFire ? "已生成" : "无") + "）");
+                + (HasFireInstance ? "已生成" : "无") + "）");
+        }
+
+        private bool SetFireLevel(FireLevel level)
+        {
+            if (entityBindings == null) { if (fire == null) return false; fire.SetLevel(level); return true; }
+            if (!entityBindings.TryGetFire(out var capability, out var error)
+                || !capability.TrySetState((FireState)level, out error)) { Warn(error); return false; }
+            return true;
         }
 
         public FireCueDto FindCue(string cueId)
@@ -598,9 +862,18 @@ namespace HMProtection.Core
         private void RefreshFrozen()
         {
             bool value = IsPaused || holdFrozen;
+            freezeLease?.Dispose(); freezeLease = null;
+            if (value && entityBindings != null && entityBindings.sessionHost != null)
+                freezeLease = entityBindings.sessionHost.Acquire(this, HMProtection.Sessions.ControlMask.Simulation);
             if (IsFrozen == value) return;
             IsFrozen = value;
-            if (fire != null) fire.SetFrozen(value);
+            if (entityBindings != null)
+            {
+                if (entityBindings.TryGetFire(out var capability, out var error))
+                { if (!capability.TrySetFrozen(value, out error)) Warn(error); }
+                else Warn(error);
+            }
+            else if (fire != null) fire.SetFrozen(value);
             if (timer != null) { if (value) timer.Pause(); else timer.Resume(); }
             Log(value ? "冻结：火焰与计时一起停" : "解冻：火焰与计时继续");
             FrozenChanged?.Invoke(value);
@@ -610,19 +883,32 @@ namespace HMProtection.Core
 
         private void ApplyPlayerControl(bool enabled)
         {
-            if (player == null) player = FindAnyObjectByType<body>();
+            if (player == null) player = entityBindings != null ? entityBindings.player : FindAnyObjectByType<body>();
             if (player == null) return;
+            if (player.sessionHost != null)
+            {
+                playerLease?.Dispose(); playerLease = null;
+                if (!enabled) playerLease = player.sessionHost.Acquire(this, HMProtection.Sessions.ControlMask.Movement
+                    | HMProtection.Sessions.ControlMask.Look | HMProtection.Sessions.ControlMask.Interaction | HMProtection.Sessions.ControlMask.ToolUse);
+                return;
+            }
             player.controlEnabled = enabled;
         }
 
         /// <summary>失火原因动画期间把玩家相机转向起火点——一进 Play 就能看见火焰（验收诉求）。</summary>
         public void FrameCameraAtFire()
         {
-            if (fire == null || player == null) return;
+            if (player == null) return;
             Camera camera = player.PlayerCamera;
             if (camera == null) return;
 
-            Vector3 target = fire.transform.position + Vector3.up * 0.25f; // 火苗大致中心
+            Vector3 target;
+            if (entityBindings != null)
+            {
+                if (!entityBindings.TryRolePose("primaryFire", "origin", out target, out var error)) { Warn(error); return; }
+            }
+            else { if (fire == null) return; target = fire.transform.position; }
+            target += Vector3.up * 0.25f; // 火苗大致中心
             Vector3 direction = target - camera.transform.position;
             Vector3 flat = new Vector3(direction.x, 0f, direction.z);
             if (flat.sqrMagnitude < 1e-4f) return;
@@ -637,35 +923,52 @@ namespace HMProtection.Core
 
         // ==== 收尾 ====
 
-        private void Finish()
+        private void Finish(bool notify = true)
         {
             QuizLoadingOverlay.Hide();
             ClearPendingAnswer();
             IsRunning = false;
             StageIndex = -1;
-            IsPaused = false;
+            IsPaused = false; pauseLease?.Dispose(); pauseLease = null;
             holdFrozen = settlement != null && settlement.IsShowing;
             RefreshFrozen();
             if (timer != null) timer.Stop();
-            if (player == null) player = FindAnyObjectByType<body>();
-            if (player != null) player.controlEnabled = !(settlement != null && settlement.IsShowing);
+            if (player == null) player = entityBindings != null ? entityBindings.player : FindAnyObjectByType<body>();
+            ApplyPlayerControl(!(settlement != null && settlement.IsShowing));
             routine = null;
             Log("关卡流程结束\n" + Score.Summary());
-            LevelFinished?.Invoke(Score);
+            if (notify && !finishedNotified)
+            {
+                finishedNotified = true;
+                LevelFinished?.Invoke(Score);
+            }
         }
 
         // ==== 工具 ====
 
-        private void ResolveReferences()
+        private bool ResolveReferences()
         {
             if (settlement == null) settlement = GetComponent<TrainingSettlementView>();
             if (settlement == null) settlement = gameObject.AddComponent<TrainingSettlementView>();
-            if (fire == null) fire = FindAnyObjectByType<FireEffectController>();
-            if (quizFlow == null) quizFlow = FindAnyObjectByType<OfficeFireChoiceFlow>();
-            if (guidance == null) guidance = FindAnyObjectByType<GuidanceSystem>();
-            if (player == null) player = FindAnyObjectByType<body>();
+            entityBindings = GetComponent<LevelBootstrapper>()?.entityBindings as OfficeEntityBindings;
+            if (entityBindings != null)
+            {
+                if (!entityBindings.IsReady || !entityBindings.TryGetFire(out _, out _))
+                { Warn("Entity migration is enabled but the required scope/bindings are not ready."); return false; }
+                quizFlow = entityBindings.flow; guidance = entityBindings.guidance; player = entityBindings.player;
+                settlement.gate = entityBindings.presentationGate;
+            }
+            else
+            {
+                if (fire == null) fire = FindAnyObjectByType<FireEffectController>();
+                if (quizFlow == null) quizFlow = FindAnyObjectByType<OfficeFireChoiceFlow>();
+                if (guidance == null) guidance = FindAnyObjectByType<GuidanceSystem>();
+                if (player == null) player = FindAnyObjectByType<body>();
+            }
             if (timer == null) timer = GetComponent<StageTimer>();
             if (timer == null) timer = gameObject.AddComponent<StageTimer>();
+            timer.sessionHost = entityBindings != null ? entityBindings.sessionHost : null;
+            return true;
         }
 
         /// <summary>按墙上时间等待若干秒（不用 deltaTime 累加，避免 deltaTime 退化时流程走不完）。</summary>
@@ -695,7 +998,9 @@ namespace HMProtection.Core
             if (keyboard.f8Key.wasPressedThisFrame) SetPaused(!IsPaused);
             // F9 火势分级只能有一个拥有者：火源自己开着 debugMode 时（测试场景）由它独占，
             // 否则同一次按键会被两个 Update 各推进一档（None→Small→Large…），看起来像随机跳级。
-            if (keyboard.f9Key.wasPressedThisFrame && (fire == null || !fire.DebugKeyEnabled)) CycleFireLevel();
+            bool fireDebug = entityBindings != null
+                ? entityBindings.TryGetFire(out var capability, out _) && capability.DebugKeyEnabled : fire != null && fire.DebugKeyEnabled;
+            if (keyboard.f9Key.wasPressedThisFrame && !fireDebug) CycleFireLevel();
             if (keyboard.f10Key.wasPressedThisFrame) SkipStage();
         }
 

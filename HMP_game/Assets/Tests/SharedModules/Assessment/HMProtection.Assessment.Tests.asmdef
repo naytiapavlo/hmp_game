@@ -1,0 +1,11 @@
+{
+  "name": "HMProtection.Assessment.Tests",
+  "rootNamespace": "HMProtection.Assessment.Tests",
+  "references": [
+    "HMProtection.Assessment",
+    "HMProtection.Score"
+  ],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "testAssemblies": true
+}

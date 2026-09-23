@@ -902,8 +902,8 @@ MonoBehaviour:
   blackout: {fileID: 199955472}
   canvasRoot: {fileID: 1259062241}
   fadeOutDuration: 0.25
-  fadeInDuration: 0.6
   skipGracePeriod: 0.4
+  chapterHoldSeconds: 2
 --- !u!82 &1259062244
 AudioSource:
   m_ObjectHideFlags: 0
@@ -1449,6 +1449,10 @@ PrefabInstance:
       propertyPath: mainMenuContent
       value: 
       objectReference: {fileID: 666368328}
+    - target: {fileID: 66596870519297098, guid: 26c277a378fedb0458496e7e349cab51, type: 3}
+      propertyPath: officeDefinition
+      value:
+      objectReference: {fileID: 11400000, guid: 3227c6bfdf90a2a419809649570bb6e3, type: 2}
     - target: {fileID: 242569453949245932, guid: 26c277a378fedb0458496e7e349cab51, type: 3}
       propertyPath: m_Name
       value: SceneSelectionUI

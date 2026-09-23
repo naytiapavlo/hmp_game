@@ -15,6 +15,7 @@ namespace HMProtection.Quiz
             public Transform approach;
         }
         public SceneChoicePresenter presenter;
+        public HMProtection.EntityAdapters.OfficeEntityBindings entityBindings;
         public GuidanceSystem guidance;
         public string questionId = "office_fire_first_action";
         public Destination[] destinations;
@@ -64,7 +65,7 @@ namespace HMProtection.Quiz
             LastError = null;
             if (!ConfigureQuestion()) return;
             if (presenter == null || guidance == null || destinations == null || destinations.Length != 4 ||
-                destinations.Any(d => d == null || d.approach == null || string.IsNullOrWhiteSpace(d.optionId)) ||
+                destinations.Any(d => d == null || (entityBindings == null && d.approach == null) || string.IsNullOrWhiteSpace(d.optionId)) ||
                 destinations.Select(d => d.optionId).Distinct().Count() != 4)
             { Fail("Office question is missing its presenter, guidance system or four destinations."); return; }
             if (!QuizLoadingOverlay.IsVisible) QuizLoadingOverlay.Show();
@@ -72,16 +73,25 @@ namespace HMProtection.Quiz
         }
         bool ConfigureQuestion()
         {
-            if (!SceneChoiceCatalog.TryLoad(out var catalog, out var error)) { Fail(error); return false; }
+            if (presenter == null) { Fail("Choice presenter is missing."); return false; }
+            if (!presenter.TryGetCatalog(out var catalog, out var error)) { Fail(error); return false; }
             var question = catalog.Find(questionId);
             if (question == null) { Fail("Question not found: " + questionId); return false; }
-            if (sceneDestinations == null) sceneDestinations = destinations;
-            if (sceneDestinations == null) { Fail("No scene destination bindings."); return false; }
+            if (entityBindings == null && sceneDestinations == null) sceneDestinations = destinations;
+            if (entityBindings == null && sceneDestinations == null) { Fail("No scene destination bindings."); return false; }
             var configured = new Destination[question.options.Length];
             for (int i = 0; i < configured.Length; i++)
             {
                 var option = question.options[i];
                 string targetId = string.IsNullOrEmpty(option.interactionTargetId) ? option.id : option.interactionTargetId;
+                if (entityBindings != null)
+                {
+                    if (!entityBindings.TryGetTargetPosition(targetId, out _, out var routeLabel, out var entityError))
+                    { Fail(entityError); return false; }
+                    configured[i] = new Destination { optionId = option.id, targetId = targetId,
+                        label = string.IsNullOrEmpty(option.routeLabel) ? routeLabel : option.routeLabel };
+                    continue;
+                }
                 var binding = sceneDestinations.FirstOrDefault(d => d != null && d.optionId == targetId);
                 if (binding == null) { Fail(questionId + ": missing physical target " + targetId); return false; }
                 configured[i] = new Destination { optionId = option.id, targetId = targetId, approach = binding.approach,
@@ -95,7 +105,7 @@ namespace HMProtection.Quiz
             // Give the opaque cover a rendered frame before camera fitting and catalogue/layout work.
             yield return null;
             QuizLoadingOverlay.SetProgress(.84f, "Setting up the overview...");
-            guidance.HideRoute();
+            CancelRoute();
             if (!presenter.ReloadCatalog() || !presenter.EnterOverview() || !presenter.ShowQuestion(questionId))
             { Fail(presenter.LastError); starting = false; presenter.ExitOverview(); QuizLoadingOverlay.Hide(); yield break; }
             inputGate = presenter.canvas.GetComponent<CanvasGroup>();
@@ -115,9 +125,9 @@ namespace HMProtection.Quiz
         {
             if (!IsQuestionActive || submitting || result.questionId != questionId) return;
             var destination = destinations.FirstOrDefault(d => d.optionId == result.optionId);
-            if (destination == null || destination.approach == null) { Fail("Selected destination is missing."); presenter.ExitOverview(); IsQuestionActive = false; return; }
+            if (destination == null || !TryDestinationPosition(destination, out var position)) { Fail("Selected destination is missing."); presenter.ExitOverview(); IsQuestionActive = false; return; }
             submitting = true; SetInput(false);
-            LastSelectedOption = result.optionId; LastDestination = destination.approach.position;
+            LastSelectedOption = result.optionId; LastDestination = position;
             routine = StartCoroutine(Guide(destination));
         }
         IEnumerator Guide(Destination destination)
@@ -127,14 +137,30 @@ namespace HMProtection.Quiz
             // This lesson explicitly requires the ceiling on after the choice, regardless of edit-mode visibility.
             if (presenter.viewController.ceiling != null) presenter.viewController.ceiling.SetCeilingsVisible(true);
             IsQuestionActive = false; starting = submitting = false;
-            guidance.ShowRoute(destination.approach.position, destination.label);
+            if (!TryDestinationPosition(destination, out var position)) { Fail("Selected entity destination is no longer available."); routine = null; yield break; }
+            if (entityBindings != null)
+            {
+                if (!entityBindings.TryShowTargetRoute(destination.targetId, out var error))
+                    Debug.LogWarning("[OfficeFireChoice] " + error, this);
+            }
+            else guidance.ShowRoute(position, destination.label);
             RouteStarted?.Invoke(destination);
             routine = null;
         }
         void SetInput(bool enabled) { if (inputGate != null) { inputGate.interactable = enabled; inputGate.blocksRaycasts = enabled; } }
+        bool TryDestinationPosition(Destination destination, out Vector3 position)
+        {
+            position = Vector3.zero;
+            if (entityBindings != null)
+                return entityBindings.TryGetTargetPosition(destination.targetId, out position, out _, out _);
+            if (destination.approach == null) return false;
+            position = destination.approach.position;
+            return true;
+        }
         void Fail(string message) { LastError = message; QuizLoadingOverlay.Hide(); Debug.LogError("[OfficeFireChoice] " + message, this); }
         public void CancelQuestion()
         {
+            CancelRoute();
             bool cancellable = starting || IsQuestionActive || submitting;
             if (routine != null) StopCoroutine(routine);
             if (cancellable) QuizLoadingOverlay.Hide();
@@ -146,6 +172,11 @@ namespace HMProtection.Quiz
         {
             if (presenter != null) presenter.SelectionSubmitted -= Selected;
             CancelQuestion();
+        }
+        public void CancelRoute()
+        {
+            if (entityBindings != null && entityBindings.routeService != null) entityBindings.routeService.Cancel();
+            if (guidance != null) guidance.HideRoute();
         }
     }
 }

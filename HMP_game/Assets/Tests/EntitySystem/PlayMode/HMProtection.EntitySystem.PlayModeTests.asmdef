@@ -1,0 +1,11 @@
+{
+  "name": "HMProtection.EntitySystem.PlayModeTests",
+  "rootNamespace": "HMProtection.EntitySystem.PlayModeTests",
+  "references": [
+    "HMProtection.Entities"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "testAssemblies": true
+}

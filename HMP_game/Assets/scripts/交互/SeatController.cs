@@ -47,6 +47,8 @@ public class SeatController : MonoBehaviour, IInteractable
     private float seatSurfaceY;         // 座面世界高度（起身要用）
 
     private bool Animating => state == SeatState.SittingDown || state == SeatState.StandingUp;
+    public bool IsTransitioning => Animating;
+    public bool IsOccupied => state != SeatState.Idle;
 
     public string GetInteractPrompt(Interactor who)
     {
@@ -59,8 +61,39 @@ public class SeatController : MonoBehaviour, IInteractable
     public void Interact(Interactor who)
     {
         if (Animating || who == null) return;
-        if (who.CurrentSeat == this) BeginStand();
-        else if (who.CarriedItem == null) BeginSit(who);
+        if (who.CurrentSeat == this) TryStand(who);
+        else if (who.CarriedItem == null) TrySit(who);
+    }
+
+    public bool TrySit(Interactor who)
+    {
+        if (Animating || who == null || who.CurrentSeat != null || who.CarriedItem != null) return false;
+        BeginSit(who);
+        return true;
+    }
+
+    public bool TryStand(Interactor who)
+    {
+        if (Animating || who == null || who.CurrentSeat != this) return false;
+        BeginStand();
+        return true;
+    }
+
+    /// <summary>Scope disposal must not leave a player frozen during a cancelled seat transition.</summary>
+    public void CancelSeat()
+    {
+        if (state == SeatState.Idle) return;
+        if (controller != null) controller.enabled = true;
+        if (playerBody != null)
+        {
+            playerBody.SetLookLocked(false);
+            playerBody.SetMovementLocked(false);
+        }
+        if (actor != null && actor.CurrentSeat == this) actor.CurrentSeat = null;
+        state = SeatState.Idle;
+        actor = null;
+        playerBody = null;
+        controller = null;
     }
 
     private void BeginSit(Interactor who)

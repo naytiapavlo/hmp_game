@@ -36,10 +36,11 @@ namespace HMProtection.Quiz
             if(timer!=null && timer.ExpireIfDue())return;
             string correctId=flow.CurrentQuestion?.correctOptionId;
             bool correct=string.IsNullOrEmpty(correctId)?target.correct:ArmedOption==correctId;
+            if(timer!=null && !timer.TryCompleteAnswer(ArmedOption))return;
             if(!feedback.Show(correct))return;
             if(timer!=null)timer.StopCountdown();
-            Completed=true;pendingReview=true;foreach(var t in targets)t.SetArmed(false);flow.guidance.HideRoute();
-            runner=FindAnyObjectByType<HMProtection.Core.LevelFlowRunner>();pausedByUs=runner!=null && runner.IsRunning && !runner.IsPaused;
+            Completed=true;pendingReview=true;foreach(var t in targets)t.SetArmed(false);flow.CancelRoute();
+            runner=ResolveRunner();pausedByUs=runner!=null && runner.IsRunning && !runner.IsPaused;
             if(pausedByUs)runner.SetPaused(true);
             onActionCompleted.Invoke(ArmedOption,correct);
         }
@@ -49,15 +50,15 @@ namespace HMProtection.Quiz
             if(Completed || feedback.IsShowing)return;
             if(flow.IsQuestionActive)flow.CancelQuestion();
             if(!feedback.Show(false))return;
-            Completed=true;pendingReview=true;ArmedOption=null;ArmedTargetId=null;foreach(var t in targets)t.SetArmed(false);flow.guidance.HideRoute();
-            runner=FindAnyObjectByType<HMProtection.Core.LevelFlowRunner>();pausedByUs=runner!=null && runner.IsRunning && !runner.IsPaused;
+            Completed=true;pendingReview=true;ArmedOption=null;ArmedTargetId=null;foreach(var t in targets)t.SetArmed(false);flow.CancelRoute();
+            runner=ResolveRunner();pausedByUs=runner!=null && runner.IsRunning && !runner.IsPaused;
             if(pausedByUs)runner.SetPaused(true);
             onActionCompleted.Invoke(string.Empty,false);
         }
         void ShowReview()
         {
             if(!pendingReview)return;
-            if(SceneChoiceCatalog.TryLoad(out var catalog,out var error))
+            if(flow.presenter.TryGetCatalog(out var catalog,out var error))
             {
                 var lesson=catalog.Find(flow.questionId)?.instructor;
                 if(lesson!=null && lesson.enabled && instructor.Show(lesson,feedback.LastCorrect))return;
@@ -66,6 +67,18 @@ namespace HMProtection.Quiz
             Resume();
         }
         void PrepareTransition(){if(isActiveAndEnabled && pendingReview && runner!=null)runner.PrepareNextQuizTransition();}
+        HMProtection.Core.LevelFlowRunner ResolveRunner() => flow != null && flow.entityBindings != null
+            ? flow.entityBindings.runner : FindAnyObjectByType<HMProtection.Core.LevelFlowRunner>();
+        public void CancelPresentation()
+        {
+            pendingReview=false;
+            if(timer!=null)timer.StopCountdown();
+            if(feedback!=null)feedback.Dismiss();
+            if(instructor!=null)instructor.Dismiss();
+            if(pausedByUs && runner!=null)runner.SetPaused(false);
+            pausedByUs=false;
+            if(targets!=null)foreach(var target in targets)if(target!=null)target.SetArmed(false);
+        }
         void Resume(){PrepareTransition();pendingReview=false;if(pausedByUs && runner!=null)runner.SetPaused(false);pausedByUs=false;}
         void OnDisable(){if(timer!=null){timer.TimedOut-=OnTimerExpired;timer.StopCountdown();}if(flow!=null){flow.RouteStarted-=Arm;flow.QuestionPresented-=ResetQuestion;}if(feedback!=null){feedback.onDismissed.RemoveListener(ShowReview);feedback.Dismiss();}if(instructor!=null){instructor.Closing-=PrepareTransition;instructor.Closed-=Resume;instructor.Dismiss();}Resume();if(targets!=null)foreach(var t in targets)if(t!=null)t.SetArmed(false);}
     }

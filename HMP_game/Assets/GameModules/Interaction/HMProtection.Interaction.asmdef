@@ -1,0 +1,7 @@
+{
+  "name": "HMProtection.Interaction",
+  "rootNamespace": "HMProtection.Modules.Interaction",
+  "references": [
+    "HMProtection.Entities"
+  ]
+}

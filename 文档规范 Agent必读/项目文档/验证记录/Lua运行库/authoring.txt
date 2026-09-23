@@ -1,0 +1,7 @@
+PASS
+PASS validation preserves a pre-opened package scene
+PASS CreateAllBatch is byte-idempotent for existing package assets
+PASS changed Lua source is rejected until its runtime cache is refreshed
+PASS missing scene reference is rejected
+PASS invalid enabled Lua is rejected by both validation and the build guard
+PASS temporary mutations restore a valid package

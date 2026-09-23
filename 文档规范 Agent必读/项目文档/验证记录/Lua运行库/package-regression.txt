@@ -1,0 +1,6 @@
+PASS
+PASS runtime definition re-reads level.json instead of relying on generated field snapshots
+PASS package A definition, initial fire state and Lua facade
+PASS definition navigation installs B, invalidates old session/API/token and applies Large/SmokeOnly
+PASS office package legacy config, bundled question catalog, Lua declaration and fire role
+PASS package shutdown releases the final session

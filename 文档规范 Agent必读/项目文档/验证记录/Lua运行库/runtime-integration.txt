@@ -1,0 +1,7 @@
+PASS
+PASS packaged A starts a real Lua VM and advances update count
+PASS real component_api:update receives C# event, JSON round-trips Chinese/empty-array/integer, and session timer crosses Lua boundary
+PASS Lua Dispose releases script-created control resources
+PASS Lua startup/update/stop failures dispose their Component API resources
+PASS navigation disposes old Lua/API callbacks and starts package B Lua runner
+PASS ReleaseEntities disposes the package B Lua runner

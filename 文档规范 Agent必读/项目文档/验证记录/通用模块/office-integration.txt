@@ -1,0 +1,13 @@
+PASS
+PASS required IDs, roles, target anchors and fire capability resolve through the ready scope
+PASS entity ID and target binding survive a runtime rename and reparent
+PASS two independently registered fire adapters retain distinct fire states
+PASS raise_alarm routePoint=(-0.72, 0.03, 11.60) interactionStand=(-0.72, 1.08, 11.60) cameraDistance=1.181 after collision-aware approach
+PASS evacuate_no_extinguisher routePoint=(-0.72, 0.03, 11.60) interactionStand=(-0.72, 1.08, 11.60) cameraDistance=1.188 after collision-aware approach
+PASS remove_damaged_strip routePoint=(8.18, 0.67, 4.70) interactionStand=(6.19, 1.58, 4.79) cameraDistance=2.452 after collision-aware approach
+PASS three entity-routed bubble selections and interactions record score, complete review, and reach settlement
+PASS rescue_documents routePoint=(-8.35, 0.03, 9.10) interactionStand=(-8.35, 1.08, 9.10) cameraDistance=1.358 after collision-aware approach
+PASS incorrect E interaction records no correct score; real timeout is terminal and exactly once
+PASS variable instructor steps include more than three lines and a missing video without losing close semantics
+PASS ten real RestartLevel scene reloads invalidate old handles, rebuild four targets and reset score
+PASS StopLevel releases the active entity scope

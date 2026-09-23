@@ -2,7 +2,6 @@ using System.Collections;
 using HMProtection.Quiz;
 using TMPro;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace HMProtection.UI
@@ -75,13 +74,6 @@ namespace HMProtection.UI
             if (Time.realtimeSinceStartup - openedAt > 75f)
             { Debug.LogWarning("[QuizLoading] Preparation timed out; releasing transition cover."); Hide(); }
         }
-        void OnEnable() => SceneManager.sceneLoaded += SceneLoaded;
-        void OnDisable() => SceneManager.sceneLoaded -= SceneLoaded;
-        void SceneLoaded(Scene scene, LoadSceneMode mode)
-        {
-            if (mode == LoadSceneMode.Single && FindAnyObjectByType<OfficeFireChoiceFlow>() == null) Hide();
-        }
-
         void Build(string title)
         {
             var canvas = GetComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceOverlay;

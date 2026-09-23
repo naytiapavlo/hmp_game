@@ -51,6 +51,9 @@ public class GuidanceSystem : MonoBehaviour
     private bool loggedFallback;
     private float nextCheckTime;
     private Transform playerCache;
+    private bool explicitPlayer;
+    public bool HasPlannedPath { get; private set; }
+    public void BindPlayer(Transform value) { playerCache = value; explicitPlayer = true; }
 
     /// <summary>找到当前场景的指引系统（每场景一个，由装配工具挂载）</summary>
     public static GuidanceSystem Find() => FindFirstObjectByType<GuidanceSystem>();
@@ -123,6 +126,7 @@ public class GuidanceSystem : MonoBehaviour
 
     private void PlanAndApply()
     {
+        HasPlannedPath = false;
         Transform player = Player();
         if (player == null) return;
         EnsureGrid();
@@ -130,6 +134,7 @@ public class GuidanceSystem : MonoBehaviour
         Vector3 start = player.position;
         if (RoutePlanner.TryPlanPath(start, currentDestination, grid, out Vector3[] waypoints))
         {
+            HasPlannedPath = true;
             currentPath = waypoints;
             planStart = start;
             pathRenderer.BuildPath(start, waypoints);
@@ -190,6 +195,7 @@ public class GuidanceSystem : MonoBehaviour
     private Transform Player()
     {
         if (playerCache != null) return playerCache;
+        if (explicitPlayer) return null;
         GameObject body = GameObject.Find("body");
         if (body != null) playerCache = body.transform;
         return playerCache;

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="4" result="Passed" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-09-23 06:47:08Z" end-time="2026-09-23 06:47:08Z" duration="0.0463147">
+  <test-suite type="TestSuite" id="1013" name="HMP_game" fullname="HMP_game" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-09-23 06:47:08Z" end-time="2026-09-23 06:47:08Z" duration="0.046315" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1019" name="HMProtection.EntitySystem.PlayModeTests.dll" fullname="C:/Users/Administrator/Desktop/hmp/hmp_game/HMP_game/Temp/EntityValidationProject/Library/ScriptAssemblies/HMProtection.EntitySystem.PlayModeTests.dll" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-09-23 06:47:08Z" end-time="2026-09-23 06:47:08Z" duration="0.040456" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="72348" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1020" name="HMProtection" fullname="HMProtection" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-09-23 06:47:08Z" end-time="2026-09-23 06:47:08Z" duration="0.039901" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1021" name="EntitySystem" fullname="HMProtection.EntitySystem" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-09-23 06:47:08Z" end-time="2026-09-23 06:47:08Z" duration="0.039586" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="1022" name="PlayModeTests" fullname="HMProtection.EntitySystem.PlayModeTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-09-23 06:47:08Z" end-time="2026-09-23 06:47:08Z" duration="0.039320" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestFixture" id="1014" name="EntityRegistryPlayModeTests" fullname="HMProtection.EntitySystem.PlayModeTests.EntityRegistryPlayModeTests" classname="HMProtection.EntitySystem.PlayModeTests.EntityRegistryPlayModeTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-09-23 06:47:08Z" end-time="2026-09-23 06:47:08Z" duration="0.038334" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1015" name="DestroyedEntityIsPurgedAfterAFrameAndItsHandleCannotBeUsed" fullname="HMProtection.EntitySystem.PlayModeTests.EntityRegistryPlayModeTests.DestroyedEntityIsPurgedAfterAFrameAndItsHandleCannotBeUsed" methodname="DestroyedEntityIsPurgedAfterAFrameAndItsHandleCannotBeUsed" classname="HMProtection.EntitySystem.PlayModeTests.EntityRegistryPlayModeTests" runstate="Runnable" seed="92210070" result="Passed" start-time="2026-09-23 06:47:08Z" end-time="2026-09-23 06:47:08Z" duration="0.020174" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1016" name="InitiallyInactiveDynamicEntityCanBeEnabledUnregisteredAndDestroyed" fullname="HMProtection.EntitySystem.PlayModeTests.EntityRegistryPlayModeTests.InitiallyInactiveDynamicEntityCanBeEnabledUnregisteredAndDestroyed" methodname="InitiallyInactiveDynamicEntityCanBeEnabledUnregisteredAndDestroyed" classname="HMProtection.EntitySystem.PlayModeTests.EntityRegistryPlayModeTests" runstate="Runnable" seed="497101985" result="Passed" start-time="2026-09-23 06:47:08Z" end-time="2026-09-23 06:47:08Z" duration="0.003410" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1017" name="InitiallyInactiveRegisteredEntityIsPurgedWhenDestroyed" fullname="HMProtection.EntitySystem.PlayModeTests.EntityRegistryPlayModeTests.InitiallyInactiveRegisteredEntityIsPurgedWhenDestroyed" methodname="InitiallyInactiveRegisteredEntityIsPurgedWhenDestroyed" classname="HMProtection.EntitySystem.PlayModeTests.EntityRegistryPlayModeTests" runstate="Runnable" seed="245914823" result="Passed" start-time="2026-09-23 06:47:08Z" end-time="2026-09-23 06:47:08Z" duration="0.001138" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1018" name="ScopeHostDisposesItsScopeWhenOwningSceneIsUnloaded" fullname="HMProtection.EntitySystem.PlayModeTests.EntityRegistryPlayModeTests.ScopeHostDisposesItsScopeWhenOwningSceneIsUnloaded" methodname="ScopeHostDisposesItsScopeWhenOwningSceneIsUnloaded" classname="HMProtection.EntitySystem.PlayModeTests.EntityRegistryPlayModeTests" runstate="Runnable" seed="2000327835" result="Passed" start-time="2026-09-23 06:47:08Z" end-time="2026-09-23 06:47:08Z" duration="0.004848" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Saving results to: C:/Users/Administrator/AppData/LocalLow/DefaultCompany/HMP_game\TestResults.xml
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

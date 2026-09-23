@@ -18,6 +18,10 @@ using UnityEngine.InputSystem;
 
 public class Interactor : MonoBehaviour
 {
+    /// <summary>Optional entity interaction boundary. Office and future levels share this base contract.</summary>
+    public HMProtection.EntityAdapters.EntityInteractionSource entityBindings;
+    private HMProtection.Entities.EntityHandle focusedEntity;
+    private bool hasEntityFocus;
     [Header("射线检测")]
     [Tooltip("交互距离（米），准星射线长度")]
     [SerializeField] private float interactRange = 2.8f;
@@ -79,6 +83,7 @@ public class Interactor : MonoBehaviour
     private HandPoseController hands;
     private ArmsPitchFollow arms;
     private InteractionHUD hud;
+    public InteractionHUD Hud => hud;
     private IInteractable focused; // 当前准星对准的可交互物（null = 没有）
     private Coroutine gestureRoutine; // 进行中的交互手势（推门/撑压），防止连点叠加
 
@@ -120,6 +125,16 @@ public class Interactor : MonoBehaviour
     private void Update()
     {
         if (HMProtection.UI.QuizLoadingOverlay.IsVisible) return;
+        if (playerBody != null && playerBody.sessionHost != null
+            && playerBody.sessionHost.IsBlocked(HMProtection.Sessions.ControlMask.Interaction))
+        {
+            focused = null;
+            focusedEntity = default;
+            hasEntityFocus = false;
+            hud.SetFocus(false);
+            hud.SetPrompt(null);
+            return;
+        }
         Keyboard kb = Keyboard.current;
         if (kb == null) return;
         bool ePressed = kb.eKey.wasPressedThisFrame;
@@ -139,7 +154,8 @@ public class Interactor : MonoBehaviour
         // E：优先交互准星目标；没瞄准任何可交互物且手上有东西 → 轻放（对齐计划书“E 拿起/放下”）
         if (ePressed)
         {
-            if (focused != null) focused.Interact(this);
+            if (hasEntityFocus) entityBindings.TryInteract(focusedEntity, out _);
+            else if (focused != null) focused.Interact(this);
             else if (CarriedItem != null) PlaceCarried();
         }
         // Q：丢弃手中物（向前轻抛）
@@ -150,6 +166,8 @@ public class Interactor : MonoBehaviour
     private void UpdateFocus()
     {
         focused = null;
+        focusedEntity = default;
+        hasEntityFocus = false;
         Camera cam = playerBody != null ? playerBody.PlayerCamera : null;
         if (cam == null) return;
 
@@ -160,8 +178,17 @@ public class Interactor : MonoBehaviour
             // 只认 Interactable 层的命中；打到墙/家具 = 被挡住
             if (((1 << hit.collider.gameObject.layer) & interactableMask.value) != 0)
             {
-                focused = hit.collider.GetComponentInParent<IInteractable>();
-                prompt = focused != null ? focused.GetInteractPrompt(this) : null;
+                if (entityBindings != null && entityBindings.ManagesCollider(hit.collider))
+                {
+                    // Managed targets never silently fall back when the scope or binding is invalid.
+                    hasEntityFocus = true;
+                    entityBindings.TryGetInteraction(hit.collider, out focusedEntity, out prompt);
+                }
+                else
+                {
+                    focused = hit.collider.GetComponentInParent<IInteractable>();
+                    prompt = focused != null ? focused.GetInteractPrompt(this) : null;
+                }
             }
         }
 

@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
+using HMProtection.Presentation;
 namespace HMProtection.Quiz
 {
     /// <summary>Reusable unscaled black-screen feedback. Scene logic supplies only correctness and optional copy.</summary>
@@ -21,18 +22,21 @@ namespace HMProtection.Quiz
         public bool IsShowing {get;private set;}
         public bool LastCorrect {get;private set;}
         public GameObject fallbackEventSystem;
+        public SessionPresentationGate gate;
         readonly Dictionary<Behaviour,bool> controls=new Dictionary<Behaviour,bool>();
         readonly Dictionary<GameObject,bool> hud=new Dictionary<GameObject,bool>();
         CursorLockMode oldLock; bool oldCursor,oldFallback; GameObject oldSelection;
         Coroutine routine;
+        IDisposable presentationLease;
         void Awake(){overlay.gameObject.SetActive(false);continueButton.onClick.AddListener(Dismiss);}
         public bool Show(bool correct,string message=null)
         {
             if(IsShowing || !isActiveAndEnabled) return false;
-            IsShowing=true;LastCorrect=correct;controls.Clear();hud.Clear();
+            if(gate!=null&&!gate.TryAcquireModal(this,out presentationLease)) return false;
+            IsShowing=true;LastCorrect=correct;controls.Clear();hud.Clear(); bool gated=presentationLease!=null;
             oldLock=Cursor.lockState;oldCursor=Cursor.visible;
             oldSelection=EventSystem.current!=null?EventSystem.current.currentSelectedGameObject:null;
-            foreach(var root in gameObject.scene.GetRootGameObjects()) {
+            if(!gated) foreach(var root in gameObject.scene.GetRootGameObjects()) {
                 foreach(var b in root.GetComponentsInChildren<Behaviour>(true)) if(b is body || b is Interactor) {controls[b]=b.enabled;b.enabled=false;}
                 foreach(var h in root.GetComponentsInChildren<InteractionHUD>(true)) {hud[h.gameObject]=h.gameObject.activeSelf;h.gameObject.SetActive(false);}
             }
@@ -45,7 +49,7 @@ namespace HMProtection.Quiz
                 fallbackEventSystem.AddComponent<InputSystemUIInputModule>();
             }
             if(fallbackEventSystem!=null){oldFallback=fallbackEventSystem.activeSelf;if(EventSystem.current==null)fallbackEventSystem.SetActive(true);}
-            Cursor.lockState=CursorLockMode.None;Cursor.visible=true;
+            if(!gated){Cursor.lockState=CursorLockMode.None;Cursor.visible=true;}
             symbol.correct=correct;symbol.progress=0;symbol.SetVerticesDirty();
             title.text=correct?"Correct":"Incorrect";
             subtitle.text=message??(correct?"Well done! You made the right choice.":"That was not the right choice. Keep learning.");
@@ -82,7 +86,7 @@ namespace HMProtection.Quiz
             foreach(var p in controls)if(p.Key!=null)p.Key.enabled=p.Value;
             foreach(var p in hud)if(p.Key!=null)p.Key.SetActive(p.Value);
             if(fallbackEventSystem!=null)fallbackEventSystem.SetActive(oldFallback);
-            Cursor.lockState=oldLock;Cursor.visible=oldCursor;
+            if(presentationLease==null){Cursor.lockState=oldLock;Cursor.visible=oldCursor;} presentationLease?.Dispose();presentationLease=null;
             EventSystem.current?.SetSelectedGameObject(oldSelection);controls.Clear();hud.Clear();IsShowing=false;
         }
         void OnDisable(){if(IsShowing)Dismiss();}
